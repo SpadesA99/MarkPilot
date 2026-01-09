@@ -186,7 +186,7 @@ function App() {
 
   const handleOpen = (item) => {
     trackClick(item.url);
-    window.location.href = item.url;
+    window.open(item.url, '_blank');
   };
 
   const handleImport = async (content, type, useAiReorg) => {
