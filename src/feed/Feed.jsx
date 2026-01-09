@@ -118,11 +118,27 @@ function Feed({ embedded = false }) {
 
   // Send Bark notification
   const sendBarkNotification = async (title, message, forceNotify = false) => {
-    if (!barkKey) return false;
-    if (!notifyEnabled && !forceNotify) return false;
+    // Always fetch latest bark_key from storage
+    let currentBarkKey = barkKey;
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      const result = await chrome.storage.local.get(['bark_key', 'feed_notify_enabled']);
+      currentBarkKey = result.bark_key || '';
+      const currentNotifyEnabled = result.feed_notify_enabled !== false;
+      if (!currentBarkKey) {
+        console.log('Bark notification skipped: no bark_key configured');
+        return false;
+      }
+      if (!currentNotifyEnabled && !forceNotify) {
+        console.log('Bark notification skipped: notifications disabled');
+        return false;
+      }
+    } else {
+      if (!currentBarkKey) return false;
+      if (!notifyEnabled && !forceNotify) return false;
+    }
 
     try {
-      const url = `https://api.day.app/${barkKey}/${encodeURIComponent(title)}/${encodeURIComponent(message)}`;
+      const url = `https://api.day.app/${currentBarkKey}/${encodeURIComponent(title)}/${encodeURIComponent(message)}`;
       const response = await fetch(url, {
         signal: AbortSignal.timeout(10000)
       });
