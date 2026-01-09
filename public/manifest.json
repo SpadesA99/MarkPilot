@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "MarkPilot",
-    "version": "1.1.0",
+    "version": "1.3.0",
     "description": "AI-Powered Chrome Bookmark Manager with VS Code Style Interface",
     "icons": {
         "16": "icon16.png",
@@ -28,7 +28,9 @@
         "favicon",
         "storage",
         "activeTab",
-        "tabs"
+        "tabs",
+        "notifications",
+        "alarms"
     ],
     "host_permissions": [
         "https://api.openai.com/*",

@@ -10,6 +10,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         popup: resolve(__dirname, 'popup.html'),
+        feed: resolve(__dirname, 'feed.html'),
         background: resolve(__dirname, 'src/background.js'),
       },
       output: {

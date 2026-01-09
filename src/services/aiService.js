@@ -373,3 +373,94 @@ export const generateTitles = async (bookmarks, settings, onProgress) => {
 
     return allTitles;
 };
+
+/**
+ * Generate a briefing summary from feed content
+ * @param {string} content - Combined feed content
+ * @param {Object} settings - AI settings
+ * @param {Function} onProgress - Progress callback
+ * @returns {Promise<string>} - Generated briefing
+ */
+export const generateBriefing = async (content, settings, onProgress) => {
+    const { provider, apiKey, model, baseUrl } = settings;
+
+    if (!apiKey) {
+        throw new Error('API Key is required');
+    }
+
+    onProgress?.('正在生成简报...');
+
+    const prompt = `
+你是一个智能信息助手。请根据以下订阅内容生成一份简洁的中文简报摘要。
+
+要求：
+1. 总结主要的新闻/文章/更新
+2. 按主题分类整理
+3. 每个条目用简短的一句话概括
+4. 如果有重要或紧急的内容，请特别标注
+5. 最后给出一个整体趋势或建议
+
+订阅内容：
+${content}
+
+请生成简报：
+`;
+
+    try {
+        let result;
+        if (provider === 'anthropic') {
+            result = await callAnthropicText(apiKey, model || 'claude-haiku-4-5-20251001', baseUrl, prompt);
+        } else {
+            result = await callOpenAIText(apiKey, model, baseUrl, prompt);
+        }
+        onProgress?.('简报生成完成');
+        return result;
+    } catch (e) {
+        console.error('Briefing generation error:', e);
+        throw e;
+    }
+};
+
+// Helper for text-only OpenAI call (no JSON mode)
+async function callOpenAIText(apiKey, model, baseUrl, prompt) {
+    const OpenAI = (await import('openai')).default;
+    const openai = new OpenAI({
+        apiKey,
+        baseURL: baseUrl || undefined,
+        dangerouslyAllowBrowser: true,
+    });
+
+    const completion = await openai.chat.completions.create({
+        model: model || 'gpt-3.5-turbo',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 2000,
+    });
+
+    return completion.choices[0].message.content;
+}
+
+// Helper for text-only Anthropic call (no JSON mode)
+async function callAnthropicText(apiKey, model, baseUrl, prompt) {
+    const response = await fetch(`${baseUrl || 'https://api.anthropic.com'}/v1/messages`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+            model: model || 'claude-haiku-4-5-20251001',
+            max_tokens: 2000,
+            messages: [{ role: 'user', content: prompt }],
+        }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(`Anthropic API error: ${error.error?.message || response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.content[0].text;
+}

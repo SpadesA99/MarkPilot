@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Settings, Home, ChevronRight, Sparkles } from 'lucide-react';
+import { Search, Settings, ChevronRight, Sparkles, Rss } from 'lucide-react';
 import BookmarkGrid from './components/BookmarkGrid';
 import SettingsPanel from './components/SettingsPanel';
 import { getBookmarksTree, deleteBookmark, createBookmark, searchBookmarks, moveBookmark, trackClick, getClickStats, flattenBookmarks, clearAllBookmarks, rebuildTree } from './services/bookmarkService';
@@ -613,30 +613,9 @@ function App() {
     }
   };
 
-
   return (
     <div className="min-h-screen bg-vscode-bg text-vscode-text">
-      {/* VS Code Title Bar */}
-      <div className="h-8 bg-vscode-sidebar border-b border-vscode-border flex items-center justify-between px-3 select-none">
-        <div className="flex items-center gap-2 text-[13px] text-vscode-text-muted">
-          <span className="text-vscode-text">Bookmark Manager</span>
-          <span>-</span>
-          <span>{currentFolder?.title || 'Loading...'}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <button className="w-6 h-6 flex items-center justify-center hover:bg-vscode-hover rounded">
-            <div className="w-3 h-0.5 bg-vscode-text-muted"></div>
-          </button>
-          <button className="w-6 h-6 flex items-center justify-center hover:bg-vscode-hover rounded">
-            <div className="w-2.5 h-2.5 border border-vscode-text-muted"></div>
-          </button>
-          <button className="w-6 h-6 flex items-center justify-center hover:bg-vscode-red rounded">
-            <span className="text-vscode-text-muted text-sm">×</span>
-          </button>
-        </div>
-      </div>
-
-      <div className="flex flex-col h-[calc(100vh-32px)]">
+      <div className="flex flex-col h-screen">
         {/* VS Code Toolbar */}
         <header className="bg-vscode-sidebar border-b border-vscode-border px-3 py-2 flex items-center justify-between gap-4">
           {/* Search - VS Code Command Palette style */}
@@ -661,6 +640,14 @@ function App() {
               <span>智能整理</span>
             </button>
             <button
+              onClick={() => window.open(chrome.runtime.getURL('feed.html'), '_blank')}
+              className="flex items-center gap-2 px-3 py-1.5 bg-vscode-orange hover:opacity-90 text-white text-[13px] rounded"
+              title="RSS 订阅管理"
+            >
+              <Rss size={14} />
+              <span>订阅</span>
+            </button>
+            <button
               onClick={() => setIsSettingsOpen(true)}
               className="p-1.5 text-vscode-text-muted hover:text-vscode-text hover:bg-vscode-hover rounded"
             >
@@ -673,24 +660,18 @@ function App() {
         {!searchQuery && (
           <nav className="bg-vscode-bg border-b border-vscode-border px-3 py-1 flex items-center justify-between">
             <div className="flex items-center gap-1 text-[13px]">
-              <button
-                onClick={() => loadBookmarks()}
-                className="p-0.5 text-vscode-text-muted hover:text-vscode-text"
-              >
-                <Home size={14} />
-              </button>
-              {breadcrumbs.slice(1).map((folder, index) => (
+              {breadcrumbs.map((folder, index) => (
                 <React.Fragment key={folder.id}>
-                  <ChevronRight size={12} className="text-vscode-text-muted" />
+                  {index > 0 && <ChevronRight size={12} className="text-vscode-text-muted" />}
                   <button
                     onClick={() => navigateTo(folder)}
                     className={`px-1 py-0.5 rounded hover:bg-vscode-hover ${
-                      index === breadcrumbs.slice(1).length - 1
+                      index === breadcrumbs.length - 1
                         ? 'text-vscode-text'
                         : 'text-vscode-text-muted hover:text-vscode-text'
                     }`}
                   >
-                    {folder.title}
+                    {folder.title || '书签栏'}
                   </button>
                 </React.Fragment>
               ))}

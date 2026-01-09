@@ -4,7 +4,7 @@
 
 [English](#english) | [中文](#中文)
 
-![MarkPilot](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![MarkPilot](https://img.shields.io/badge/version-1.3.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Chrome](https://img.shields.io/badge/chrome-extension-yellow.svg)
 
@@ -26,6 +26,15 @@ MarkPilot is a modern Chrome extension that revolutionizes how you organize book
 - **Smart Title Generation** - AI generates meaningful titles for untitled bookmarks
 - **Import/Export** - Support for Chrome HTML and JSON formats
 - **Auto Cleanup** - Automatically remove empty folders after reorganization
+- **Quick Add Popup** - Add bookmarks from any page via toolbar icon
+- **RSS/Sitemap Subscription** - Auto-discover and subscribe to RSS feeds from bookmarks
+- **Manual RSS Add** - Manually add any RSS/Atom subscription URL
+- **Concurrent Discovery** - 10 parallel requests for fast feed discovery
+- **Smart Deduplication** - Skip subscribed, deleted, and no-feed domains
+- **AI Briefing** - Generate AI summaries of unread subscription content
+- **Auto Refresh** - Configurable automatic feed refresh (15min - 24h)
+- **Browser Notifications** - Click notifications to open feed page directly
+- **Test Notifications** - Verify notification settings in the feed settings panel
 
 ### Installation
 
@@ -70,6 +79,16 @@ MarkPilot is a modern Chrome extension that revolutionizes how you organize book
 3. **Re-categorize Folder** - Click the sparkle icon on "未分类" folder to reorganize uncategorized items
 4. **Search** - Use the search bar (Ctrl+P) to find bookmarks
 5. **Import** - Import bookmarks from Chrome HTML export or JSON files
+6. **Quick Add** - Click the extension icon to quickly add current page to bookmarks
+7. **Subscriptions** - Click the orange "订阅" button to manage RSS subscriptions:
+   - Click "一键发现订阅" to auto-discover RSS feeds (10 concurrent requests)
+   - Click "手动添加" to add RSS/Atom URL directly
+   - Click "刷新全部" to fetch latest content
+   - Click "AI 简报" to generate a summary of unread content
+   - Configure auto-refresh interval in settings (default: 1 hour)
+   - Deleted subscriptions and no-feed domains are cached to speed up future scans
+   - Click browser notifications to open feed page directly
+   - Use "测试通知" to verify notifications, "清除无订阅缓存" to rescan domains
 
 ### Tech Stack
 
@@ -102,6 +121,15 @@ MarkPilot 是一款现代化的 Chrome 书签管理扩展，通过 AI 技术彻�
 - **智能标题生成** - AI 为无标题书签生成有意义的标题
 - **导入/导出** - 支持 Chrome HTML 和 JSON 格式
 - **自动清理** - 重新整理后自动删除空文件夹
+- **快速添加** - 通过工具栏图标快速将当前页面添加到书签
+- **RSS/Sitemap 订阅** - 自动发现并订阅书签中的 RSS 源
+- **手动添加订阅** - 支持直接输入 RSS/Atom 订阅地址
+- **并发发现** - 10 个并发请求快速发现订阅
+- **智能去重** - 跳过已订阅、已删除和无订阅的域名
+- **AI 简报** - 生成未读订阅内容的 AI 摘要
+- **定时刷新** - 可配置的自动刷新（15分钟 - 24小时）
+- **浏览器通知** - 点击通知直接打开订阅页面
+- **测试通知** - 在设置中验证通知功能是否正常
 
 ### 安装方法
 
@@ -146,6 +174,16 @@ MarkPilot 是一款现代化的 Chrome 书签管理扩展，通过 AI 技术彻�
 3. **重新分类** - 点击「未分类」文件夹上的闪光图标重新整理未分类项目
 4. **搜索** - 使用搜索栏 (Ctrl+P) 查找书签
 5. **导入** - 从 Chrome HTML 导出文件或 JSON 文件导入书签
+6. **快速添加** - 点击扩展图标快速将当前页面添加到书签
+7. **订阅管理** - 点击橙色「订阅」按钮管理 RSS 订阅：
+   - 点击「一键发现订阅」从书签中自动发现 RSS 源（10 并发）
+   - 点击「手动添加」直接输入 RSS/Atom 地址
+   - 点击「刷新全部」获取最新内容
+   - 点击「AI 简报」生成未读内容摘要
+   - 在设置中配置自动刷新间隔（默认：1小时）
+   - 已删除的订阅和无订阅域名会被缓存，加快后续扫描
+   - 点击浏览器通知可直接打开订阅页面
+   - 「测试通知」验证通知，「清除无订阅缓存」重新扫描域名
 
 ### 技术栈
 
