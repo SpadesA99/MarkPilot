@@ -742,44 +742,6 @@ function Feed({ embedded = false }) {
               {autoRefreshInterval > 0 ? `每 ${autoRefreshInterval} 分钟自动刷新并生成简报` : '自动刷新已关闭'}
             </span>
             <div className="border-l border-vscode-border h-4 mx-2"></div>
-            <div className="flex items-center gap-2">
-              <Bell size={14} className="text-vscode-text-muted" />
-              <span className="text-[12px] text-vscode-text-muted">Bark Key:</span>
-              <input
-                type="text"
-                value={barkKey}
-                onChange={(e) => {
-                  setBarkKey(e.target.value);
-                  if (typeof chrome !== 'undefined' && chrome.storage) {
-                    chrome.storage.local.set({ bark_key: e.target.value });
-                  }
-                }}
-                placeholder="输入 Bark Key"
-                className="bg-vscode-bg border border-vscode-border rounded px-2 py-1 text-[12px] w-40"
-              />
-              <button
-                onClick={async () => {
-                  if (!barkKey) {
-                    alert('请先输入 Bark Key');
-                    return;
-                  }
-                  const success = await sendBarkNotification(
-                    'MarkPilot 通知测试',
-                    '如果您在手机上看到此消息，说明 Bark 通知已配置成功！',
-                    true // forceNotify - 测试时忽略 notifyEnabled 设置
-                  );
-                  if (success) {
-                    alert('测试通知已发送，请检查手机');
-                  } else {
-                    alert('通知发送失败，请检查 Bark Key 是否正确');
-                  }
-                }}
-                className="text-[12px] text-vscode-blue hover:text-vscode-blue-light"
-              >
-                测试通知
-              </button>
-            </div>
-            <div className="border-l border-vscode-border h-4 mx-2"></div>
             <button
               onClick={async () => {
                 if (confirm('确定要清除已删除订阅的记录吗？这将允许重新发现之前删除的订阅。')) {

@@ -9,7 +9,7 @@ const SettingsPanel = ({ isOpen, onClose, onImport, onSortChange, currentSort })
         baseUrl: ''
     });
 
-    const [useAiReorg, setUseAiReorg] = useState(false);
+    const [useAiReorg, setUseAiReorg] = useState(true);
     const [barkKey, setBarkKey] = useState('');
     const [testingAi, setTestingAi] = useState(false);
     const [aiTestResult, setAiTestResult] = useState(null); // 'success' | 'error' | null
@@ -45,22 +45,6 @@ const SettingsPanel = ({ isOpen, onClose, onImport, onSortChange, currentSort })
         }
     };
 
-    const handleSaveAiSettings = () => {
-        if (typeof chrome !== 'undefined' && chrome.storage) {
-            chrome.storage.local.set({
-                ai_provider: aiSettings.provider,
-                ai_api_key: aiSettings.apiKey,
-                ai_model: aiSettings.model,
-                ai_base_url: aiSettings.baseUrl,
-                openai_api_key: aiSettings.apiKey
-            }, () => {
-                alert('AI 设置已保存');
-            });
-        } else {
-            alert('AI 设置已保存 (Mock)');
-        }
-    };
-
     // Test AI API connection
     const handleTestAi = async () => {
         if (!aiSettings.apiKey) {
@@ -92,15 +76,6 @@ const SettingsPanel = ({ isOpen, onClose, onImport, onSortChange, currentSort })
             setAiTestResult('error');
         } finally {
             setTestingAi(false);
-        }
-    };
-
-    // Save Bark Key
-    const handleSaveBarkKey = () => {
-        if (typeof chrome !== 'undefined' && chrome.storage) {
-            chrome.storage.local.set({ bark_key: barkKey }, () => {
-                alert('Bark Key 已保存');
-            });
         }
     };
 
@@ -221,33 +196,24 @@ const SettingsPanel = ({ isOpen, onClose, onImport, onSortChange, currentSort })
                             />
                         </div>
 
-                        <div className="flex gap-2">
-                            <button
-                                onClick={handleTestAi}
-                                disabled={testingAi || !aiSettings.apiKey}
-                                className="flex-1 p-2 bg-vscode-green/20 hover:bg-vscode-green/30 text-vscode-green rounded text-[13px] flex items-center justify-center gap-2 disabled:opacity-50"
-                            >
-                                {testingAi ? (
-                                    <Loader2 size={14} className="animate-spin" />
-                                ) : aiTestResult === 'success' ? (
-                                    <CheckCircle size={14} />
-                                ) : aiTestResult === 'error' ? (
-                                    <XCircle size={14} className="text-vscode-red" />
-                                ) : (
-                                    <Settings size={14} />
-                                )}
-                                <span>{testingAi ? '测试中...' : aiTestResult === 'success' ? '连接成功' : aiTestResult === 'error' ? '连接失败' : '测试连接'}</span>
-                            </button>
-                            <button
-                                onClick={handleSaveAiSettings}
-                                className="flex-1 p-2 bg-vscode-blue hover:bg-vscode-blue-light text-white rounded text-[13px] flex items-center justify-center gap-2"
-                            >
-                                <Save size={14} />
-                                <span>保存设置</span>
-                            </button>
-                        </div>
+                        <button
+                            onClick={handleTestAi}
+                            disabled={testingAi || !aiSettings.apiKey}
+                            className="w-full p-2 bg-vscode-green/20 hover:bg-vscode-green/30 text-vscode-green rounded text-[13px] flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                            {testingAi ? (
+                                <Loader2 size={14} className="animate-spin" />
+                            ) : aiTestResult === 'success' ? (
+                                <CheckCircle size={14} />
+                            ) : aiTestResult === 'error' ? (
+                                <XCircle size={14} className="text-vscode-red" />
+                            ) : (
+                                <Settings size={14} />
+                            )}
+                            <span>{testingAi ? '测试中...' : aiTestResult === 'success' ? '已保存' : aiTestResult === 'error' ? '连接失败' : '测试并保存'}</span>
+                        </button>
                         {aiTestResult === 'success' && (
-                            <p className="text-[11px] text-vscode-green mt-1">AI 设置已自动保存</p>
+                            <p className="text-[11px] text-vscode-green mt-1">AI 连接成功，设置已保存</p>
                         )}
                         {aiTestResult === 'error' && (
                             <p className="text-[11px] text-vscode-red mt-1">请检查 API Key 和设置是否正确</p>
@@ -270,33 +236,24 @@ const SettingsPanel = ({ isOpen, onClose, onImport, onSortChange, currentSort })
                             />
                         </div>
 
-                        <div className="flex gap-2">
-                            <button
-                                onClick={handleTestBark}
-                                disabled={testingBark || !barkKey}
-                                className="flex-1 p-2 bg-vscode-orange/20 hover:bg-vscode-orange/30 text-vscode-orange rounded text-[13px] flex items-center justify-center gap-2 disabled:opacity-50"
-                            >
-                                {testingBark ? (
-                                    <Loader2 size={14} className="animate-spin" />
-                                ) : barkTestResult === 'success' ? (
-                                    <CheckCircle size={14} />
-                                ) : barkTestResult === 'error' ? (
-                                    <XCircle size={14} className="text-vscode-red" />
-                                ) : (
-                                    <Bell size={14} />
-                                )}
-                                <span>{testingBark ? '发送中...' : barkTestResult === 'success' ? '发送成功' : barkTestResult === 'error' ? '发送失败' : '测试通知'}</span>
-                            </button>
-                            <button
-                                onClick={handleSaveBarkKey}
-                                className="flex-1 p-2 bg-vscode-blue hover:bg-vscode-blue-light text-white rounded text-[13px] flex items-center justify-center gap-2"
-                            >
-                                <Save size={14} />
-                                <span>保存 Key</span>
-                            </button>
-                        </div>
+                        <button
+                            onClick={handleTestBark}
+                            disabled={testingBark || !barkKey}
+                            className="w-full p-2 bg-vscode-orange/20 hover:bg-vscode-orange/30 text-vscode-orange rounded text-[13px] flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                            {testingBark ? (
+                                <Loader2 size={14} className="animate-spin" />
+                            ) : barkTestResult === 'success' ? (
+                                <CheckCircle size={14} />
+                            ) : barkTestResult === 'error' ? (
+                                <XCircle size={14} className="text-vscode-red" />
+                            ) : (
+                                <Bell size={14} />
+                            )}
+                            <span>{testingBark ? '发送中...' : barkTestResult === 'success' ? '已保存' : barkTestResult === 'error' ? '发送失败' : '测试并保存'}</span>
+                        </button>
                         {barkTestResult === 'success' && (
-                            <p className="text-[11px] text-vscode-green">Bark Key 已自动保存，请检查手机通知</p>
+                            <p className="text-[11px] text-vscode-green">通知发送成功，Key 已保存</p>
                         )}
                         {barkTestResult === 'error' && (
                             <p className="text-[11px] text-vscode-red">发送失败，请检查 Bark Key 是否正确</p>
