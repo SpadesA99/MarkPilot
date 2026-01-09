@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "MarkPilot",
-    "version": "1.4.0",
+    "version": "1.4.1",
     "description": "AI-Powered Chrome Bookmark Manager with VS Code Style Interface",
     "icons": {
         "16": "icon16.png",

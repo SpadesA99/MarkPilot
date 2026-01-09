@@ -758,6 +758,14 @@ function Feed({ embedded = false }) {
     return sum + (sub.items?.filter(i => !readSet.has(i.link)).length || 0);
   }, 0);
 
+  // Count unread items from followed subscriptions only (for AI briefing)
+  const followedUnreadCount = subscriptionList
+    .filter(sub => sub.followed)
+    .reduce((sum, sub) => {
+      const readSet = new Set(sub.readItems || []);
+      return sum + (sub.items?.filter(i => !readSet.has(i.link)).slice(0, 5).length || 0);
+    }, 0);
+
   return (
     <div className={embedded ? "flex flex-col h-full" : "min-h-screen bg-vscode-bg text-vscode-text"}>
       {/* Title Bar - only show in standalone mode */}
@@ -807,7 +815,7 @@ function Feed({ embedded = false }) {
             className="flex items-center gap-2 px-3 py-1.5 bg-vscode-blue hover:bg-vscode-blue-light text-white text-[13px] rounded disabled:opacity-50"
           >
             <Sparkles size={14} />
-            <span>{generating ? '生成中...' : `AI 简报 (${unreadCount})`}</span>
+            <span>{generating ? '生成中...' : `AI 简报 (${followedUnreadCount})`}</span>
           </button>
 
           <button
@@ -1108,9 +1116,9 @@ function Feed({ embedded = false }) {
             <div className="flex items-center gap-2 text-[13px] font-medium">
               <Sparkles size={14} className="text-vscode-purple" />
               <span>AI 简报</span>
-              {unreadCount > 0 && (
+              {followedUnreadCount > 0 && (
                 <span className="px-1.5 py-0.5 text-[10px] bg-vscode-blue/20 text-vscode-blue rounded">
-                  {unreadCount} 未读
+                  {followedUnreadCount} 关注未读
                 </span>
               )}
             </div>
@@ -1157,9 +1165,9 @@ function Feed({ embedded = false }) {
                   {subscriptionList.length === 0
                     ? '先添加订阅，然后生成简报'
                     : Object.values(subscriptions).some(s => s.followed)
-                      ? unreadCount > 0
-                        ? `有 ${unreadCount} 条未读内容，点击"AI 简报"生成摘要`
-                        : '暂无未读内容'
+                      ? followedUnreadCount > 0
+                        ? `关注订阅有 ${followedUnreadCount} 条未读内容，点击"AI 简报"生成摘要`
+                        : '关注订阅暂无未读内容'
                       : '请先点击星标关注订阅源，AI 简报仅分析关注的订阅'
                   }
                 </div>
