@@ -801,6 +801,48 @@ function Feed({ embedded = false }) {
             >
               清除无订阅缓存
             </button>
+            <div className="border-l border-vscode-border h-4 mx-2"></div>
+            <button
+              onClick={async () => {
+                if (Object.keys(subscriptions).length === 0) {
+                  alert('没有订阅源');
+                  return;
+                }
+                if (confirm(`确定要删除全部 ${Object.keys(subscriptions).length} 个订阅源吗？此操作不可恢复。`)) {
+                  await chrome.storage.local.set({ subscriptions: {} });
+                  setSubscriptions({});
+                  alert('已删除所有订阅源');
+                }
+              }}
+              className="text-[12px] text-vscode-text-muted hover:text-vscode-red"
+            >
+              删除所有订阅
+            </button>
+            <div className="border-l border-vscode-border h-4 mx-2"></div>
+            <button
+              onClick={async () => {
+                const subCount = Object.keys(subscriptions).length;
+                const ignoredDomains = await getIgnoredDomains();
+                const noFeedKeys = await getNoFeedDomains();
+                const totalItems = subCount + ignoredDomains.size + noFeedKeys.size;
+
+                if (totalItems === 0) {
+                  alert('没有缓存数据');
+                  return;
+                }
+
+                if (confirm(`确定要清除所有缓存数据吗？\n\n包括:\n- ${subCount} 个订阅源\n- ${ignoredDomains.size} 个删除记录\n- ${noFeedKeys.size} 个无订阅缓存\n\n此操作不可恢复。`)) {
+                  await chrome.storage.local.set({ subscriptions: {} });
+                  await clearIgnoredDomains();
+                  await clearNoFeedDomains();
+                  setSubscriptions({});
+                  alert('已清除所有缓存数据');
+                }
+              }}
+              className="text-[12px] text-vscode-red hover:text-red-400"
+            >
+              清除所有数据
+            </button>
           </div>
         </div>
       )}
