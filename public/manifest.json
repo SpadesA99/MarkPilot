@@ -1,0 +1,22 @@
+{
+    "manifest_version": 3,
+    "name": "MarkPilot",
+    "version": "1.0.0",
+    "description": "AI-Powered Chrome Bookmark Manager with VS Code Style Interface",
+    "chrome_url_overrides": {
+        "newtab": "index.html"
+    },
+    "permissions": [
+        "bookmarks",
+        "favicon",
+        "storage"
+    ],
+    "host_permissions": [
+        "https://api.openai.com/*",
+        "https://api.anthropic.com/*",
+        "*://*/*"
+    ],
+    "content_security_policy": {
+        "extension_pages": "script-src 'self'; object-src 'self'"
+    }
+}
