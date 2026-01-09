@@ -13,6 +13,7 @@ function Feed() {
   const [briefingExpanded, setBriefingExpanded] = useState(true);
   const [notifyEnabled, setNotifyEnabled] = useState(true);
   const [autoRefreshInterval, setAutoRefreshInterval] = useState(60); // minutes
+  const [barkKey, setBarkKey] = useState(''); // Bark notification key
   const [showSettings, setShowSettings] = useState(false);
   const [logs, setLogs] = useState([]);
   const [discoveryProgress, setDiscoveryProgress] = useState({ current: 0, total: 0 });
@@ -96,12 +97,39 @@ function Feed() {
     if (typeof chrome !== 'undefined' && chrome.storage) {
       const result = await chrome.storage.local.get([
         'feed_notify_enabled',
-        'feed_refresh_interval'
+        'feed_refresh_interval',
+        'bark_key'
       ]);
       setNotifyEnabled(result.feed_notify_enabled !== false);
       if (result.feed_refresh_interval) {
         setAutoRefreshInterval(result.feed_refresh_interval);
       }
+      if (result.bark_key) {
+        setBarkKey(result.bark_key);
+      }
+    }
+  };
+
+  // Send Bark notification
+  const sendBarkNotification = async (title, message, forceNotify = false) => {
+    if (!barkKey) return false;
+    if (!notifyEnabled && !forceNotify) return false;
+
+    try {
+      const url = `https://api.day.app/${barkKey}/${encodeURIComponent(title)}/${encodeURIComponent(message)}`;
+      const response = await fetch(url, {
+        signal: AbortSignal.timeout(10000)
+      });
+      if (response.ok) {
+        console.log('Bark notification sent:', title);
+        return true;
+      } else {
+        console.error('Bark notification failed:', response.status);
+        return false;
+      }
+    } catch (e) {
+      console.error('Bark notification error:', e);
+      return false;
     }
   };
 
@@ -120,19 +148,47 @@ function Feed() {
       // Get all bookmarks
       const tree = await chrome.bookmarks.getTree();
 
-      // Flatten to get all URLs
+      // Flatten to get all URLs and extract subpaths
       const allUrls = [];
-      const seenDomains = new Set();
+      const seenKeys = new Set(); // domain or domain+subpath
+
+      // Subpath patterns to extract from URLs
+      const subpathPatterns = ['/blog', '/posts', '/articles', '/news', '/updates', '/changelog'];
 
       const traverse = (nodes) => {
         for (const node of nodes) {
           if (node.url) {
             try {
-              const domain = new URL(node.url).hostname;
-              // Deduplicate by domain
-              if (!seenDomains.has(domain)) {
-                seenDomains.add(domain);
-                allUrls.push({ url: node.url, title: node.title, domain });
+              const urlObj = new URL(node.url);
+              const domain = urlObj.hostname;
+              const pathname = urlObj.pathname;
+
+              // Add base domain if not seen
+              if (!seenKeys.has(domain)) {
+                seenKeys.add(domain);
+                allUrls.push({ url: urlObj.origin, title: node.title, domain, key: domain });
+              }
+
+              // Check for subpaths in the URL
+              for (const pattern of subpathPatterns) {
+                if (pathname.toLowerCase().includes(pattern)) {
+                  // Extract the subpath (e.g., /blog or /blog/category)
+                  const patternIndex = pathname.toLowerCase().indexOf(pattern);
+                  const subpath = pathname.substring(0, patternIndex + pattern.length);
+                  const subpathKey = domain + subpath;
+
+                  if (!seenKeys.has(subpathKey)) {
+                    seenKeys.add(subpathKey);
+                    allUrls.push({
+                      url: urlObj.origin + subpath,
+                      title: `${node.title} (${subpath})`,
+                      domain,
+                      key: subpathKey,
+                      isSubpath: true
+                    });
+                  }
+                  break; // Only add first matching subpath
+                }
               }
             } catch (e) {
               // Invalid URL
@@ -145,7 +201,9 @@ function Feed() {
       };
       traverse(tree);
 
-      setLogs(prev => [...prev, `找到 ${allUrls.length} 个不同域名的书签`]);
+      const baseCount = allUrls.filter(u => !u.isSubpath).length;
+      const subpathCount = allUrls.filter(u => u.isSubpath).length;
+      setLogs(prev => [...prev, `找到 ${baseCount} 个域名 + ${subpathCount} 个子路径，共 ${allUrls.length} 个待检查`]);
       setDiscoveryProgress({ current: 0, total: allUrls.length });
 
       // Check each URL for feeds
@@ -165,116 +223,142 @@ function Feed() {
       // Get domains known to have no feeds
       const noFeedDomains = await getNoFeedDomains();
 
-      // Filter out already subscribed, ignored, and no-feed domains
-      const skippedSubscribedDomains = [];
-      const skippedIgnoredDomains = [];
-      const skippedNoFeedDomains = [];
-      const urlsToCheck = allUrls.filter(({ domain }) => {
+      // Filter out already subscribed, ignored, and no-feed URLs
+      const skippedSubscribed = [];
+      const skippedIgnored = [];
+      const skippedNoFeed = [];
+      const urlsToCheck = allUrls.filter(({ domain, key }) => {
+        // Check if domain is already subscribed
         if (existingDomains.has(domain)) {
-          skippedSubscribedDomains.push(domain);
+          skippedSubscribed.push(key);
           return false;
         }
+        // Check if domain was deleted (ignored)
         if (ignoredDomains.has(domain)) {
-          skippedIgnoredDomains.push(domain);
+          skippedIgnored.push(key);
           return false;
         }
-        if (noFeedDomains.has(domain)) {
-          skippedNoFeedDomains.push(domain);
+        // Check if this specific URL (key) has no feed
+        if (noFeedDomains.has(key)) {
+          skippedNoFeed.push(key);
           return false;
         }
         return true;
       });
 
-      if (skippedSubscribedDomains.length > 0) {
-        setLogs(prev => [...prev, `⏭ 跳过 ${skippedSubscribedDomains.length} 个已订阅的域名`]);
+      if (skippedSubscribed.length > 0) {
+        setLogs(prev => [...prev, `⏭ 跳过 ${skippedSubscribed.length} 个已订阅的 URL`]);
       }
-      if (skippedIgnoredDomains.length > 0) {
-        setLogs(prev => [...prev, `🚫 跳过 ${skippedIgnoredDomains.length} 个已删除的域名`]);
+      if (skippedIgnored.length > 0) {
+        setLogs(prev => [...prev, `🚫 跳过 ${skippedIgnored.length} 个已删除的域名`]);
       }
-      if (skippedNoFeedDomains.length > 0) {
-        setLogs(prev => [...prev, `⚪ 跳过 ${skippedNoFeedDomains.length} 个无订阅的域名`]);
+      if (skippedNoFeed.length > 0) {
+        setLogs(prev => [...prev, `⚪ 跳过 ${skippedNoFeed.length} 个无订阅的 URL`]);
       }
-      const skipped = skippedSubscribedDomains.length + skippedIgnoredDomains.length + skippedNoFeedDomains.length;
+      const skipped = skippedSubscribed.length + skippedIgnored.length + skippedNoFeed.length;
 
-      setLogs(prev => [...prev, `🚀 开始并发检查 ${urlsToCheck.length} 个域名 (并发数: 10)`]);
+      const POOL_SIZE = 10; // Task pool size
+      setLogs(prev => [...prev, `🚀 开始任务池检查 ${urlsToCheck.length} 个 URL (并发数: ${POOL_SIZE})`]);
 
       let discovered = 0;
       let processed = 0;
-      const BATCH_SIZE = 10; // Concurrent batch size
-      const newNoFeedDomains = []; // Collect domains with no feeds
+      let taskIndex = 0;
+      let idCounter = 0; // Counter for unique IDs
+      const newNoFeedKeys = []; // Collect keys (domain or domain+subpath) with no feeds
 
-      // Process in batches
-      for (let i = 0; i < urlsToCheck.length; i += BATCH_SIZE) {
-        const batch = urlsToCheck.slice(i, i + BATCH_SIZE);
+      // Task pool implementation
+      const processTask = async ({ url, title, domain, key }) => {
+        try {
+          const feed = await discoverFeed(url);
+          return { url, title, domain, key, feed, success: true };
+        } catch (e) {
+          return { url, title, domain, key, feed: null, success: false, error: e };
+        }
+      };
 
-        // Log current batch URLs being checked
-        const batchDomains = batch.map(b => b.domain).join(', ');
-        setLogs(prev => [...prev, `🔍 检查: ${batchDomains}`]);
+      const handleResult = async (result) => {
+        processed++;
+        const { url, title, domain, key, feed } = result;
 
-        // Process batch concurrently
-        const results = await Promise.allSettled(
-          batch.map(async ({ url, title, domain }) => {
-            try {
-              const feed = await discoverFeed(url);
-              return { url, title, domain, feed };
-            } catch (e) {
-              return { url, title, domain, feed: null, error: e };
-            }
-          })
-        );
+        if (feed) {
+          // Create subscription with unique ID using counter
+          idCounter++;
+          const subscription = {
+            id: Date.now().toString() + '-' + idCounter + '-' + Math.random().toString(36).slice(2, 7),
+            url,
+            title: title || domain,
+            feedUrl: feed.feedUrl,
+            feedType: feed.type,
+            feedTitle: feed.title,
+            items: [],
+            readItems: [],
+            lastChecked: null,
+            createdAt: new Date().toISOString()
+          };
 
-        // Process results
-        for (const result of results) {
-          processed++;
+          await saveSubscription(subscription);
+          existingDomains.add(domain);
+          discovered++;
+          setLogs(prev => [...prev, `✓ 发现订阅: ${key} (${feed.type})`]);
 
-          if (result.status === 'fulfilled') {
-            const { url, title, domain, feed } = result.value;
-
-            if (feed) {
-              // Create subscription
-              const subscription = {
-                id: Date.now().toString() + Math.random().toString(36).slice(2, 11),
-                url,
-                title: title || domain,
-                feedUrl: feed.feedUrl,
-                feedType: feed.type,
-                feedTitle: feed.title,
-                items: [],
-                readItems: [],
-                lastChecked: null,
-                createdAt: new Date().toISOString()
-              };
-
-              await saveSubscription(subscription);
-              existingDomains.add(domain);
-              discovered++;
-              setLogs(prev => [...prev, `✓ 发现订阅: ${domain} (${feed.type})`]);
-
-              // Update state
-              setSubscriptions(prev => ({
-                ...prev,
-                [subscription.id]: subscription
-              }));
-            } else {
-              // Save domain as no-feed
-              newNoFeedDomains.push(domain);
-              setLogs(prev => [...prev, `✗ 无订阅: ${domain}`]);
-            }
-          }
+          // Update state
+          setSubscriptions(prev => ({
+            ...prev,
+            [subscription.id]: subscription
+          }));
+        } else {
+          // Save key as no-feed (allows granular caching for subpaths)
+          newNoFeedKeys.push(key);
+          setLogs(prev => [...prev, `✗ 无订阅: ${key}`]);
         }
 
-        // Update progress after each batch
-        setDiscoveryProgress({ current: Math.min(i + BATCH_SIZE, urlsToCheck.length) + skipped, total: allUrls.length });
-        setLogs(prev => [...prev, `📊 进度: ${processed}/${urlsToCheck.length} 已检查`]);
+        // Update progress
+        setDiscoveryProgress({ current: processed + skipped, total: allUrls.length });
+      };
+
+      // Run task pool
+      const runTaskPool = async () => {
+        const activePromises = new Map();
+
+        const startNextTask = () => {
+          if (taskIndex < urlsToCheck.length) {
+            const task = urlsToCheck[taskIndex];
+            const taskId = taskIndex;
+            taskIndex++;
+
+            setLogs(prev => [...prev, `🔍 检查: ${task.key}`]);
+
+            const promise = processTask(task).then(async (result) => {
+              activePromises.delete(taskId);
+              await handleResult(result);
+              // Start next task immediately when one completes
+              startNextTask();
+            });
+
+            activePromises.set(taskId, promise);
+          }
+        };
+
+        // Start initial pool of tasks
+        for (let i = 0; i < Math.min(POOL_SIZE, urlsToCheck.length); i++) {
+          startNextTask();
+        }
+
+        // Wait for all tasks to complete
+        while (activePromises.size > 0) {
+          await Promise.race(activePromises.values());
+        }
+      };
+
+      await runTaskPool();
+
+      // Save all no-feed keys at once
+      if (newNoFeedKeys.length > 0) {
+        await addNoFeedDomains(newNoFeedKeys);
+        setLogs(prev => [...prev, `💾 已记录 ${newNoFeedKeys.length} 个无订阅 URL，下次将跳过`]);
       }
 
-      // Save all no-feed domains at once
-      if (newNoFeedDomains.length > 0) {
-        await addNoFeedDomains(newNoFeedDomains);
-        setLogs(prev => [...prev, `💾 已记录 ${newNoFeedDomains.length} 个无订阅域名，下次将跳过`]);
-      }
-
-      setLogs(prev => [...prev, `\n✅ 完成！发现 ${discovered} 个新订阅，跳过 ${skipped} 个域名`]);
+      setLogs(prev => [...prev, `\n✅ 完成！发现 ${discovered} 个新订阅，跳过 ${skipped} 个 URL`]);
     } catch (e) {
       console.error('Discovery error:', e);
       setLogs(prev => [...prev, `✗ 错误: ${e.message}`]);
@@ -300,17 +384,12 @@ function Feed() {
         [subId]: updated
       }));
 
-      // Notify if enabled and has new items
-      if (notifyEnabled && newItems.length > 0) {
-        if (typeof chrome !== 'undefined' && chrome.notifications) {
-          chrome.notifications.create('markpilot-feed-' + Date.now(), {
-            type: 'basic',
-            iconUrl: chrome.runtime.getURL('icon48.png'),
-            title: `${updated.title} 有更新`,
-            message: `发现 ${newItems.length} 条新内容`,
-            priority: 2
-          });
-        }
+      // Notify via Bark if enabled and has new items
+      if (newItems.length > 0) {
+        await sendBarkNotification(
+          `${updated.title} 有更新`,
+          `发现 ${newItems.length} 条新内容`
+        );
       }
 
       return newItems.length;
@@ -382,6 +461,12 @@ function Feed() {
     setBriefing('');
 
     try {
+      if (typeof chrome === 'undefined' || !chrome.storage) {
+        alert('存储 API 不可用');
+        setGenerating(false);
+        return;
+      }
+
       const result = await chrome.storage.local.get(['ai_provider', 'ai_api_key', 'ai_model', 'ai_base_url']);
       const settings = {
         provider: result.ai_provider || 'openai',
@@ -424,15 +509,12 @@ function Feed() {
       }
       setSubscriptions(updatedSubs);
 
-      // Notify
-      if (autoNotify && typeof chrome !== 'undefined' && chrome.notifications) {
-        chrome.notifications.create('markpilot-briefing-' + Date.now(), {
-          type: 'basic',
-          iconUrl: chrome.runtime.getURL('icon48.png'),
-          title: 'AI 简报已生成',
-          message: `已分析 ${allItems.length} 条新内容，点击查看简报`,
-          priority: 2
-        });
+      // Notify via Bark
+      if (autoNotify) {
+        await sendBarkNotification(
+          'AI 简报已生成',
+          `已分析 ${allItems.length} 条新内容`
+        );
       }
 
       setLogs(prev => [...prev, '✓ 简报生成完成']);
@@ -645,30 +727,43 @@ function Feed() {
               {autoRefreshInterval > 0 ? `每 ${autoRefreshInterval} 分钟自动刷新并生成简报` : '自动刷新已关闭'}
             </span>
             <div className="border-l border-vscode-border h-4 mx-2"></div>
-            <button
-              onClick={() => {
-                if (typeof chrome !== 'undefined' && chrome.notifications) {
-                  chrome.notifications.create('markpilot-test-' + Date.now(), {
-                    type: 'basic',
-                    iconUrl: chrome.runtime.getURL('icon48.png'),
-                    title: 'MarkPilot 通知测试',
-                    message: '如果您看到此消息，说明通知功能正常工作！点击可打开订阅页面。',
-                    priority: 2
-                  }, (id) => {
-                    if (chrome.runtime.lastError) {
-                      alert('通知发送失败: ' + chrome.runtime.lastError.message);
-                    } else {
-                      console.log('Test notification created:', id);
-                    }
-                  });
-                } else {
-                  alert('通知 API 不可用');
-                }
-              }}
-              className="text-[12px] text-vscode-blue hover:text-vscode-blue-light"
-            >
-              测试通知
-            </button>
+            <div className="flex items-center gap-2">
+              <Bell size={14} className="text-vscode-text-muted" />
+              <span className="text-[12px] text-vscode-text-muted">Bark Key:</span>
+              <input
+                type="text"
+                value={barkKey}
+                onChange={(e) => {
+                  setBarkKey(e.target.value);
+                  if (typeof chrome !== 'undefined' && chrome.storage) {
+                    chrome.storage.local.set({ bark_key: e.target.value });
+                  }
+                }}
+                placeholder="输入 Bark Key"
+                className="bg-vscode-bg border border-vscode-border rounded px-2 py-1 text-[12px] w-40"
+              />
+              <button
+                onClick={async () => {
+                  if (!barkKey) {
+                    alert('请先输入 Bark Key');
+                    return;
+                  }
+                  const success = await sendBarkNotification(
+                    'MarkPilot 通知测试',
+                    '如果您在手机上看到此消息，说明 Bark 通知已配置成功！',
+                    true // forceNotify - 测试时忽略 notifyEnabled 设置
+                  );
+                  if (success) {
+                    alert('测试通知已发送，请检查手机');
+                  } else {
+                    alert('通知发送失败，请检查 Bark Key 是否正确');
+                  }
+                }}
+                className="text-[12px] text-vscode-blue hover:text-vscode-blue-light"
+              >
+                测试通知
+              </button>
+            </div>
             <div className="border-l border-vscode-border h-4 mx-2"></div>
             <button
               onClick={async () => {
@@ -684,12 +779,12 @@ function Feed() {
             <div className="border-l border-vscode-border h-4 mx-2"></div>
             <button
               onClick={async () => {
-                const noFeedDomains = await getNoFeedDomains();
-                if (noFeedDomains.size === 0) {
-                  alert('没有缓存的无订阅域名');
+                const noFeedKeys = await getNoFeedDomains();
+                if (noFeedKeys.size === 0) {
+                  alert('没有缓存的无订阅 URL');
                   return;
                 }
-                if (confirm(`确定要清除 ${noFeedDomains.size} 个无订阅域名的缓存吗？这将允许重新检查这些域名。`)) {
+                if (confirm(`确定要清除 ${noFeedKeys.size} 个无订阅 URL 的缓存吗？这将允许重新检查这些 URL。`)) {
                   await clearNoFeedDomains();
                   alert('已清除无订阅缓存');
                 }

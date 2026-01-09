@@ -62,10 +62,11 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     console.log('Auto-refreshing feeds...');
 
     try {
-      // Get subscriptions
-      const result = await chrome.storage.local.get(['subscriptions', 'feed_notify_enabled']);
+      // Get subscriptions and settings
+      const result = await chrome.storage.local.get(['subscriptions', 'feed_notify_enabled', 'bark_key']);
       const subscriptions = result.subscriptions || {};
       const notifyEnabled = result.feed_notify_enabled !== false;
+      const barkKey = result.bark_key || '';
 
       if (Object.keys(subscriptions).length === 0) {
         return;
@@ -130,36 +131,29 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
       // Save updated subscriptions
       await chrome.storage.local.set({ subscriptions: updatedSubs });
 
-      // Notify if there are new items
-      if (totalNewItems > 0 && notifyEnabled) {
-        const notificationId = 'markpilot-feed-' + Date.now();
-        chrome.notifications.create(notificationId, {
-          type: 'basic',
-          iconUrl: chrome.runtime.getURL('icon48.png'),
-          title: 'MarkPilot 订阅更新',
-          message: `发现 ${totalNewItems} 条新内容，点击查看`,
-          priority: 2
-        }, (id) => {
-          if (chrome.runtime.lastError) {
-            console.error('Notification error:', chrome.runtime.lastError);
+      // Notify via Bark if there are new items
+      if (totalNewItems > 0 && notifyEnabled && barkKey) {
+        try {
+          const title = encodeURIComponent('MarkPilot 订阅更新');
+          const message = encodeURIComponent(`发现 ${totalNewItems} 条新内容`);
+          const url = `https://api.day.app/${barkKey}/${title}/${message}`;
+          const response = await fetch(url, {
+            signal: AbortSignal.timeout(10000)
+          });
+          if (response.ok) {
+            console.log('Bark notification sent');
           } else {
-            console.log('Notification created:', id);
+            console.error('Bark notification failed:', response.status);
           }
-        });
+        } catch (e) {
+          console.error('Bark notification error:', e);
+        }
       }
 
       console.log('Auto-refresh complete. New items:', totalNewItems);
     } catch (e) {
       console.error('Auto-refresh error:', e);
     }
-  }
-});
-
-// Handle notification click - open feed page
-chrome.notifications.onClicked.addListener((notificationId) => {
-  if (notificationId.startsWith('markpilot-')) {
-    chrome.tabs.create({ url: chrome.runtime.getURL('feed.html') });
-    chrome.notifications.clear(notificationId);
   }
 });
 

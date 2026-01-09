@@ -33,8 +33,8 @@ MarkPilot is a modern Chrome extension that revolutionizes how you organize book
 - **Smart Deduplication** - Skip subscribed, deleted, and no-feed domains
 - **AI Briefing** - Generate AI summaries of unread subscription content
 - **Auto Refresh** - Configurable automatic feed refresh (15min - 24h)
-- **Browser Notifications** - Click notifications to open feed page directly
-- **Test Notifications** - Verify notification settings in the feed settings panel
+- **Bark Notifications** - Push notifications to iOS devices via Bark app
+- **Test Notifications** - Verify Bark notification settings in the feed settings panel
 
 ### Installation
 
@@ -87,8 +87,8 @@ MarkPilot is a modern Chrome extension that revolutionizes how you organize book
    - Click "AI 简报" to generate a summary of unread content
    - Configure auto-refresh interval in settings (default: 1 hour)
    - Deleted subscriptions and no-feed domains are cached to speed up future scans
-   - Click browser notifications to open feed page directly
-   - Use "测试通知" to verify notifications, "清除无订阅缓存" to rescan domains
+   - Enter your Bark Key in settings to receive push notifications on iOS
+   - Use "测试通知" to verify Bark notifications, "清除无订阅缓存" to rescan domains
 
 ### Tech Stack
 
@@ -128,8 +128,8 @@ MarkPilot 是一款现代化的 Chrome 书签管理扩展，通过 AI 技术彻�
 - **智能去重** - 跳过已订阅、已删除和无订阅的域名
 - **AI 简报** - 生成未读订阅内容的 AI 摘要
 - **定时刷新** - 可配置的自动刷新（15分钟 - 24小时）
-- **浏览器通知** - 点击通知直接打开订阅页面
-- **测试通知** - 在设置中验证通知功能是否正常
+- **Bark 推送** - 通过 Bark App 向 iOS 设备推送通知
+- **测试通知** - 在设置中验证 Bark 通知是否正常
 
 ### 安装方法
 
@@ -182,8 +182,8 @@ MarkPilot 是一款现代化的 Chrome 书签管理扩展，通过 AI 技术彻�
    - 点击「AI 简报」生成未读内容摘要
    - 在设置中配置自动刷新间隔（默认：1小时）
    - 已删除的订阅和无订阅域名会被缓存，加快后续扫描
-   - 点击浏览器通知可直接打开订阅页面
-   - 「测试通知」验证通知，「清除无订阅缓存」重新扫描域名
+   - 在设置中输入 Bark Key 接收 iOS 推送通知
+   - 「测试通知」验证 Bark 通知，「清除无订阅缓存」重新扫描域名
 
 ### 技术栈
 

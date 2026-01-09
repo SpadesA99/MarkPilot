@@ -56,9 +56,21 @@ export const discoverFeed = async (url) => {
       '/feed.xml',
       '/index.xml',
       '/blog/feed',
+      '/blog/feed/',
       '/blog/rss',
+      '/blog/rss.xml',
+      '/blog/atom.xml',
+      '/blog/feed.xml',
+      '/blog/index.xml',
+      '/posts/feed',
+      '/posts/rss.xml',
+      '/articles/feed',
+      '/news/feed',
       '/?feed=rss2',
-      '/feeds/posts/default' // Blogger
+      '/feeds/posts/default', // Blogger
+      '/rss/index.xml',
+      '/feed/rss2',
+      '/feed/atom'
     ];
 
     for (const path of commonPaths) {
@@ -368,16 +380,6 @@ export const addIgnoredDomain = async (domain) => {
 };
 
 /**
- * Remove domain from ignored list
- * @param {string} domain
- */
-export const removeIgnoredDomain = async (domain) => {
-  const ignored = await getIgnoredDomains();
-  ignored.delete(domain);
-  await chrome.storage.local.set({ ignored_feed_domains: Array.from(ignored) });
-};
-
-/**
  * Clear all ignored domains
  */
 export const clearIgnoredDomains = async () => {
@@ -385,7 +387,8 @@ export const clearIgnoredDomains = async () => {
 };
 
 /**
- * Get domains that have no RSS feeds (discovered during scan)
+ * Get URLs/keys that have no RSS feeds (discovered during scan)
+ * Keys can be domain (e.g., "example.com") or domain+subpath (e.g., "example.com/blog")
  * @returns {Promise<Set<string>>}
  */
 export const getNoFeedDomains = async () => {
@@ -397,12 +400,13 @@ export const getNoFeedDomains = async () => {
 };
 
 /**
- * Add multiple domains to no-feed list (batch)
- * @param {string[]} domains
+ * Add multiple keys to no-feed list (batch)
+ * Keys can be domain (e.g., "example.com") or domain+subpath (e.g., "example.com/blog")
+ * @param {string[]} keys - Array of domain or domain+subpath strings
  */
-export const addNoFeedDomains = async (domains) => {
+export const addNoFeedDomains = async (keys) => {
   const noFeed = await getNoFeedDomains();
-  domains.forEach(d => noFeed.add(d));
+  keys.forEach(k => noFeed.add(k));
   await chrome.storage.local.set({ no_feed_domains: Array.from(noFeed) });
 };
 
