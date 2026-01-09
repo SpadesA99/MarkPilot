@@ -17,7 +17,7 @@ const SettingsPanel = ({ isOpen, onClose, onImport, onSortChange, currentSort })
                 setAiSettings({
                     provider: result.ai_provider || 'openai',
                     apiKey: result.ai_api_key || result.openai_api_key || '',
-                    model: result.ai_model || 'claude-sonnet-4-5-20250929',
+                    model: result.ai_model || 'claude-haiku-4-5-20251001',
                     baseUrl: result.ai_base_url || ''
                 });
                 if (result.use_ai_reorg !== undefined) {
@@ -118,7 +118,7 @@ const SettingsPanel = ({ isOpen, onClose, onImport, onSortChange, currentSort })
                                 type="text"
                                 value={aiSettings.model}
                                 onChange={(e) => setAiSettings({ ...aiSettings, model: e.target.value })}
-                                placeholder={aiSettings.provider === 'anthropic' ? 'claude-sonnet-4-5-20250929' : 'gpt-3.5-turbo'}
+                                placeholder={aiSettings.provider === 'anthropic' ? 'claude-haiku-4-5-20251001' : 'gpt-3.5-turbo'}
                                 className="w-full p-2 bg-vscode-bg border border-vscode-border rounded text-[13px] text-vscode-text placeholder-vscode-text-muted focus:border-vscode-blue focus:outline-none"
                             />
                         </div>
