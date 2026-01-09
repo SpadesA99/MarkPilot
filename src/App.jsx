@@ -620,17 +620,24 @@ function App() {
       <div className="flex flex-col h-screen">
         {/* VS Code Toolbar */}
         <header className="bg-vscode-sidebar border-b border-vscode-border px-3 py-2 flex items-center justify-between gap-4">
-          {/* Search - VS Code Command Palette style */}
-          <div className="relative flex-1 max-w-xl">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-vscode-text-muted w-4 h-4" />
-            <input
-              type="text"
-              placeholder="搜索书签... (Ctrl+P)"
-              value={searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-1.5 bg-vscode-bg border border-vscode-border rounded text-[13px] text-vscode-text placeholder-vscode-text-muted focus:border-vscode-blue focus:outline-none"
-            />
-          </div>
+          {/* Search - VS Code Command Palette style - only show in bookmarks view */}
+          {currentView === 'bookmarks' ? (
+            <div className="relative flex-1 max-w-xl">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-vscode-text-muted w-4 h-4" />
+              <input
+                type="text"
+                placeholder="搜索书签... (Ctrl+P)"
+                value={searchQuery}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="w-full pl-9 pr-4 py-1.5 bg-vscode-bg border border-vscode-border rounded text-[13px] text-vscode-text placeholder-vscode-text-muted focus:border-vscode-blue focus:outline-none"
+              />
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-[13px] text-vscode-text-muted">
+              <Rss size={14} className="text-vscode-orange" />
+              <span className="text-vscode-text font-medium">RSS 订阅管理</span>
+            </div>
+          )}
 
           {/* Actions */}
           <div className="flex items-center gap-2">

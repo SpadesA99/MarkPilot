@@ -7,7 +7,7 @@ function Feed({ embedded = false }) {
   const [subscriptions, setSubscriptions] = useState({});
   const [loading, setLoading] = useState(true);
   const [discovering, setDiscovering] = useState(false);
-  const [refreshing, setRefreshing] = useState(null);
+  const [refreshingIds, setRefreshingIds] = useState(new Set());
   const [generating, setGenerating] = useState(false);
   const [briefing, setBriefing] = useState('');
   const [briefingExpanded, setBriefingExpanded] = useState(true);
@@ -369,7 +369,7 @@ function Feed({ embedded = false }) {
   };
 
   const handleRefresh = async (subId) => {
-    setRefreshing(subId);
+    setRefreshingIds(prev => new Set(prev).add(subId));
     try {
       const sub = subscriptions[subId];
       const oldItems = sub.items || [];
@@ -397,7 +397,11 @@ function Feed({ embedded = false }) {
       console.error('Refresh failed:', e);
       return 0;
     } finally {
-      setRefreshing(null);
+      setRefreshingIds(prev => {
+        const next = new Set(prev);
+        next.delete(subId);
+        return next;
+      });
     }
   };
 
@@ -661,11 +665,11 @@ function Feed({ embedded = false }) {
 
           <button
             onClick={handleRefreshAll}
-            disabled={loading || refreshing || discovering}
+            disabled={loading || refreshingIds.size > 0 || discovering}
             className="flex items-center gap-2 px-3 py-1.5 bg-vscode-hover hover:bg-vscode-active text-[13px] rounded disabled:opacity-50"
           >
-            <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
-            <span>刷新全部</span>
+            <RefreshCw size={14} className={refreshingIds.size > 0 ? 'animate-spin' : ''} />
+            <span>{refreshingIds.size > 0 ? `刷新中 (${refreshingIds.size})` : '刷新全部'}</span>
           </button>
 
           <button
@@ -952,7 +956,7 @@ function Feed({ embedded = false }) {
                 <FeedCard
                   key={sub.id}
                   subscription={sub}
-                  isRefreshing={refreshing === sub.id}
+                  isRefreshing={refreshingIds.has(sub.id)}
                   onRefresh={() => handleRefresh(sub.id)}
                   onDelete={() => handleDelete(sub.id)}
                 />
