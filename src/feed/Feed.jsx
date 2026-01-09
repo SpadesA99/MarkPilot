@@ -3,7 +3,7 @@ import { RefreshCw, Rss, Sparkles, Bell, BellOff, ChevronDown, ChevronUp, Search
 import FeedCard from './FeedCard';
 import { getSubscriptions, deleteSubscription, refreshSubscription, discoverFeed, saveSubscription, getIgnoredDomains, clearIgnoredDomains, getNoFeedDomains, addNoFeedDomains, clearNoFeedDomains, parseRSS } from '../services/feedService';
 
-function Feed() {
+function Feed({ embedded = false }) {
   const [subscriptions, setSubscriptions] = useState({});
   const [loading, setLoading] = useState(true);
   const [discovering, setDiscovering] = useState(false);
@@ -626,24 +626,26 @@ function Feed() {
   }, 0);
 
   return (
-    <div className="min-h-screen bg-vscode-bg text-vscode-text">
-      {/* Title Bar */}
-      <div className="h-8 bg-vscode-sidebar border-b border-vscode-border flex items-center justify-between px-3 select-none">
-        <div className="flex items-center gap-2 text-[13px] text-vscode-text-muted">
-          <Rss size={14} className="text-vscode-orange" />
-          <span className="text-vscode-text">MarkPilot Subscriptions</span>
-          <span>-</span>
-          <span>{subscriptionList.length} 订阅 / {unreadCount} 未读</span>
+    <div className={embedded ? "flex flex-col h-full" : "min-h-screen bg-vscode-bg text-vscode-text"}>
+      {/* Title Bar - only show in standalone mode */}
+      {!embedded && (
+        <div className="h-8 bg-vscode-sidebar border-b border-vscode-border flex items-center justify-between px-3 select-none">
+          <div className="flex items-center gap-2 text-[13px] text-vscode-text-muted">
+            <Rss size={14} className="text-vscode-orange" />
+            <span className="text-vscode-text">MarkPilot Subscriptions</span>
+            <span>-</span>
+            <span>{subscriptionList.length} 订阅 / {unreadCount} 未读</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <a
+              href="index.html"
+              className="px-2 py-0.5 text-[12px] text-vscode-text-muted hover:text-vscode-text hover:bg-vscode-hover rounded"
+            >
+              返回书签
+            </a>
+          </div>
         </div>
-        <div className="flex items-center gap-1">
-          <a
-            href="index.html"
-            className="px-2 py-0.5 text-[12px] text-vscode-text-muted hover:text-vscode-text hover:bg-vscode-hover rounded"
-          >
-            返回书签
-          </a>
-        </div>
-      </div>
+      )}
 
       {/* Toolbar */}
       <header className="bg-vscode-sidebar border-b border-vscode-border px-4 py-2 flex items-center justify-between gap-4">
@@ -931,7 +933,7 @@ function Feed() {
       )}
 
       {/* Main Content */}
-      <div className="flex flex-col lg:flex-row h-[calc(100vh-120px)]">
+      <div className={`flex flex-col lg:flex-row ${embedded ? 'flex-1 overflow-hidden' : 'h-[calc(100vh-120px)]'}`}>
         {/* Left: Subscriptions */}
         <div className="flex-1 overflow-y-auto p-4">
           {loading ? (

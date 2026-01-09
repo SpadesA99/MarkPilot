@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Settings, ChevronRight, Sparkles, Rss } from 'lucide-react';
+import { Search, Settings, ChevronRight, Sparkles, Rss, Bookmark } from 'lucide-react';
 import BookmarkGrid from './components/BookmarkGrid';
 import SettingsPanel from './components/SettingsPanel';
+import Feed from './feed/Feed';
 import { getBookmarksTree, deleteBookmark, createBookmark, searchBookmarks, moveBookmark, trackClick, getClickStats, flattenBookmarks, clearAllBookmarks, rebuildTree } from './services/bookmarkService';
 
 function App() {
@@ -11,6 +12,7 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [sortMode, setSortMode] = useState('default'); // 'default' | 'frequency'
+  const [currentView, setCurrentView] = useState('bookmarks'); // 'bookmarks' | 'feed'
   const [loading, setLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [processingLogs, setProcessingLogs] = useState([]);
@@ -632,21 +634,34 @@ function App() {
 
           {/* Actions */}
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleAutoCategorize}
-              className="flex items-center gap-2 px-3 py-1.5 bg-vscode-blue hover:bg-vscode-blue-light text-white text-[13px] rounded"
-            >
-              <Sparkles size={14} />
-              <span>智能整理</span>
-            </button>
-            <button
-              onClick={() => window.open(chrome.runtime.getURL('feed.html'), '_blank')}
-              className="flex items-center gap-2 px-3 py-1.5 bg-vscode-orange hover:opacity-90 text-white text-[13px] rounded"
-              title="RSS 订阅管理"
-            >
-              <Rss size={14} />
-              <span>订阅</span>
-            </button>
+            {currentView === 'bookmarks' ? (
+              <>
+                <button
+                  onClick={handleAutoCategorize}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-vscode-blue hover:bg-vscode-blue-light text-white text-[13px] rounded"
+                >
+                  <Sparkles size={14} />
+                  <span>智能整理</span>
+                </button>
+                <button
+                  onClick={() => setCurrentView('feed')}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-vscode-orange hover:opacity-90 text-white text-[13px] rounded"
+                  title="RSS 订阅管理"
+                >
+                  <Rss size={14} />
+                  <span>订阅</span>
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => setCurrentView('bookmarks')}
+                className="flex items-center gap-2 px-3 py-1.5 bg-vscode-green hover:opacity-90 text-white text-[13px] rounded"
+                title="返回书签"
+              >
+                <Bookmark size={14} />
+                <span>书签</span>
+              </button>
+            )}
             <button
               onClick={() => setIsSettingsOpen(true)}
               className="p-1.5 text-vscode-text-muted hover:text-vscode-text hover:bg-vscode-hover rounded"
@@ -656,8 +671,8 @@ function App() {
           </div>
         </header>
 
-        {/* VS Code Breadcrumbs */}
-        {!searchQuery && (
+        {/* VS Code Breadcrumbs - only show in bookmarks view */}
+        {currentView === 'bookmarks' && !searchQuery && (
           <nav className="bg-vscode-bg border-b border-vscode-border px-3 py-1 flex items-center justify-between">
             <div className="flex items-center gap-1 text-[13px]">
               {breadcrumbs.map((folder, index) => (
@@ -684,8 +699,10 @@ function App() {
         )}
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4">
-          {loading ? (
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
+          {currentView === 'feed' ? (
+            <Feed embedded={true} />
+          ) : loading ? (
             <div className="fixed inset-0 bg-vscode-bg/95 flex items-center justify-center z-50">
               <div className="w-full max-w-2xl mx-4">
                 <div className="text-center mb-6">
@@ -721,14 +738,16 @@ function App() {
               </div>
             </div>
           ) : (
-            <BookmarkGrid
-              items={sortedBookmarks}
-              onNavigate={navigateTo}
-              onDelete={handleDelete}
-              onOpen={handleOpen}
-              clickStats={clickStats}
-              onAiReorganize={handleAiReorganizeFolder}
-            />
+            <div className="p-4">
+              <BookmarkGrid
+                items={sortedBookmarks}
+                onNavigate={navigateTo}
+                onDelete={handleDelete}
+                onOpen={handleOpen}
+                clickStats={clickStats}
+                onAiReorganize={handleAiReorganizeFolder}
+              />
+            </div>
           )}
         </div>
       </div>
