@@ -379,7 +379,7 @@ export const generateTitles = async (bookmarks, settings, onProgress) => {
  * @param {string} content - Combined feed content
  * @param {Object} settings - AI settings
  * @param {Function} onProgress - Progress callback
- * @returns {Promise<string>} - Generated briefing
+ * @returns {Promise<Array<{title: string, content: string}>>} - Generated briefing items
  */
 export const generateBriefing = async (content, settings, onProgress) => {
     const { provider, apiKey, model, baseUrl } = settings;
@@ -393,25 +393,34 @@ export const generateBriefing = async (content, settings, onProgress) => {
     const prompt = `
 你是一个智能信息助手。请根据以下订阅内容生成一份简洁的中文简报摘要。
 
+重要指令：仅返回原始 JSON 数组。
+- 不要使用 markdown 代码块（不要 \`\`\`json）。
+- JSON 前后不要包含任何文本。
+- 必须严格输出 JSON 数组，不要输出其他内容。
+
+输出格式：
+[
+  { "title": "分类标题1", "content": "该分类下的摘要内容..." },
+  { "title": "分类标题2", "content": "该分类下的摘要内容..." }
+]
+
 要求：
-1. 总结主要的新闻/文章/更新
-2. 按主题分类整理
-3. 每个条目用简短的一句话概括
-4. 如果有重要或紧急的内容，请特别标注
-5. 最后给出一个整体趋势或建议
+1. 按主题分类整理，每个分类一个条目
+2. title 是分类名称（如"技术动态"、"行业新闻"等）
+3. content 是该分类下所有内容的简洁摘要
+4. 如果有重要内容，在 content 中用【重要】标注
+5. 最后一个条目的 title 为"总结"，content 为整体趋势或建议
 
 订阅内容：
 ${content}
-
-请生成简报：
 `;
 
     try {
         let result;
         if (provider === 'anthropic') {
-            result = await callAnthropicText(apiKey, model || 'claude-haiku-4-5-20251001', baseUrl, prompt);
+            result = await callAnthropicJSON(apiKey, model || 'claude-haiku-4-5-20251001', baseUrl, prompt);
         } else {
-            result = await callOpenAIText(apiKey, model, baseUrl, prompt);
+            result = await callOpenAIJSON(apiKey, model, baseUrl, prompt);
         }
         onProgress?.('简报生成完成');
         return result;
@@ -421,8 +430,8 @@ ${content}
     }
 };
 
-// Helper for text-only OpenAI call (no JSON mode)
-async function callOpenAIText(apiKey, model, baseUrl, prompt) {
+// Helper for JSON OpenAI call for briefing
+async function callOpenAIJSON(apiKey, model, baseUrl, prompt) {
     const OpenAI = (await import('openai')).default;
     const openai = new OpenAI({
         apiKey,
@@ -434,13 +443,31 @@ async function callOpenAIText(apiKey, model, baseUrl, prompt) {
         model: model || 'gpt-3.5-turbo',
         messages: [{ role: 'user', content: prompt }],
         max_tokens: 2000,
+        response_format: { type: "json_object" },
     });
 
-    return completion.choices[0].message.content;
+    let content = completion.choices[0].message.content;
+    content = content.replace(/```\w*\n?|\n?```/g, '').trim();
+
+    const parsed = safeJSONParse(content);
+    // Handle both array format and object with items property
+    if (Array.isArray(parsed)) {
+        return parsed;
+    }
+    if (parsed.items && Array.isArray(parsed.items)) {
+        return parsed.items;
+    }
+    // Try to extract array from object
+    const firstArrayKey = Object.keys(parsed).find(k => Array.isArray(parsed[k]));
+    if (firstArrayKey) {
+        return parsed[firstArrayKey];
+    }
+    // Fallback: convert object to array
+    return [{ title: '简报', content: JSON.stringify(parsed) }];
 }
 
-// Helper for text-only Anthropic call (no JSON mode)
-async function callAnthropicText(apiKey, model, baseUrl, prompt) {
+// Helper for JSON Anthropic call for briefing
+async function callAnthropicJSON(apiKey, model, baseUrl, prompt) {
     const response = await fetch(`${baseUrl || 'https://api.anthropic.com'}/v1/messages`, {
         method: 'POST',
         headers: {
@@ -452,7 +479,7 @@ async function callAnthropicText(apiKey, model, baseUrl, prompt) {
         body: JSON.stringify({
             model: model || 'claude-haiku-4-5-20251001',
             max_tokens: 2000,
-            messages: [{ role: 'user', content: prompt }],
+            messages: [{ role: 'user', content: prompt + '\n\nRespond with JSON array only.' }],
         }),
     });
 
@@ -462,5 +489,80 @@ async function callAnthropicText(apiKey, model, baseUrl, prompt) {
     }
 
     const data = await response.json();
-    return data.content[0].text;
+    let content = data.content[0].text;
+    content = content.replace(/```\w*\n?|\n?```/g, '').trim();
+
+    // Extract JSON array from response
+    const arrayMatch = content.match(/\[[\s\S]*\]/);
+    if (arrayMatch) {
+        return safeJSONParse(arrayMatch[0]);
+    }
+
+    const parsed = safeJSONParse(content);
+    if (Array.isArray(parsed)) {
+        return parsed;
+    }
+    return [{ title: '简报', content: content }];
 }
+
+
+/**
+ * Test AI API connection with a simple request
+ * @param {Object} settings - AI settings
+ * @returns {Promise<boolean>} - True if connection successful
+ */
+export const testConnection = async (settings) => {
+    const { provider, apiKey, model, baseUrl } = settings;
+
+    if (!apiKey) {
+        throw new Error('API Key is required');
+    }
+
+    const testPrompt = 'Reply with exactly: OK';
+
+    try {
+        if (provider === 'anthropic') {
+            const response = await fetch(`${baseUrl || 'https://api.anthropic.com'}/v1/messages`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': apiKey,
+                    'anthropic-version': '2023-06-01',
+                    'anthropic-dangerous-direct-browser-access': 'true',
+                },
+                body: JSON.stringify({
+                    model: model || 'claude-haiku-4-5-20251001',
+                    max_tokens: 10,
+                    messages: [{ role: 'user', content: testPrompt }],
+                }),
+                signal: AbortSignal.timeout(15000),
+            });
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({}));
+                throw new Error(error.error?.message || response.statusText);
+            }
+
+            return true;
+        } else {
+            // OpenAI or compatible API
+            const OpenAI = (await import('openai')).default;
+            const openai = new OpenAI({
+                apiKey,
+                baseURL: baseUrl || undefined,
+                dangerouslyAllowBrowser: true,
+            });
+
+            await openai.chat.completions.create({
+                model: model || 'gpt-3.5-turbo',
+                messages: [{ role: 'user', content: testPrompt }],
+                max_tokens: 10,
+            });
+
+            return true;
+        }
+    } catch (e) {
+        console.error('AI connection test failed:', e);
+        throw e;
+    }
+};

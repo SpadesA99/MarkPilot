@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Upload, Save, Settings } from 'lucide-react';
+import { X, Upload, Save, Settings, Bell, Loader2, CheckCircle, XCircle } from 'lucide-react';
 
 const SettingsPanel = ({ isOpen, onClose, onImport, onSortChange, currentSort }) => {
     const [aiSettings, setAiSettings] = useState({
@@ -10,10 +10,15 @@ const SettingsPanel = ({ isOpen, onClose, onImport, onSortChange, currentSort })
     });
 
     const [useAiReorg, setUseAiReorg] = useState(false);
+    const [barkKey, setBarkKey] = useState('');
+    const [testingAi, setTestingAi] = useState(false);
+    const [aiTestResult, setAiTestResult] = useState(null); // 'success' | 'error' | null
+    const [testingBark, setTestingBark] = useState(false);
+    const [barkTestResult, setBarkTestResult] = useState(null); // 'success' | 'error' | null
 
     useEffect(() => {
         if (typeof chrome !== 'undefined' && chrome.storage) {
-            chrome.storage.local.get(['ai_provider', 'ai_api_key', 'ai_model', 'ai_base_url', 'openai_api_key', 'use_ai_reorg'], (result) => {
+            chrome.storage.local.get(['ai_provider', 'ai_api_key', 'ai_model', 'ai_base_url', 'openai_api_key', 'use_ai_reorg', 'bark_key'], (result) => {
                 setAiSettings({
                     provider: result.ai_provider || 'openai',
                     apiKey: result.ai_api_key || result.openai_api_key || '',
@@ -23,8 +28,14 @@ const SettingsPanel = ({ isOpen, onClose, onImport, onSortChange, currentSort })
                 if (result.use_ai_reorg !== undefined) {
                     setUseAiReorg(result.use_ai_reorg);
                 }
+                if (result.bark_key) {
+                    setBarkKey(result.bark_key);
+                }
             });
         }
+        // Reset test results when panel opens
+        setAiTestResult(null);
+        setBarkTestResult(null);
     }, [isOpen]);
 
     const handleAiReorgChange = (checked) => {
@@ -47,6 +58,82 @@ const SettingsPanel = ({ isOpen, onClose, onImport, onSortChange, currentSort })
             });
         } else {
             alert('AI 设置已保存 (Mock)');
+        }
+    };
+
+    // Test AI API connection
+    const handleTestAi = async () => {
+        if (!aiSettings.apiKey) {
+            alert('请先输入 API Key');
+            return;
+        }
+
+        setTestingAi(true);
+        setAiTestResult(null);
+
+        try {
+            const { testConnection } = await import('../services/aiService');
+            const success = await testConnection(aiSettings);
+            setAiTestResult(success ? 'success' : 'error');
+            if (success) {
+                // Auto save on successful test
+                if (typeof chrome !== 'undefined' && chrome.storage) {
+                    chrome.storage.local.set({
+                        ai_provider: aiSettings.provider,
+                        ai_api_key: aiSettings.apiKey,
+                        ai_model: aiSettings.model,
+                        ai_base_url: aiSettings.baseUrl,
+                        openai_api_key: aiSettings.apiKey
+                    });
+                }
+            }
+        } catch (e) {
+            console.error('AI test failed:', e);
+            setAiTestResult('error');
+        } finally {
+            setTestingAi(false);
+        }
+    };
+
+    // Save Bark Key
+    const handleSaveBarkKey = () => {
+        if (typeof chrome !== 'undefined' && chrome.storage) {
+            chrome.storage.local.set({ bark_key: barkKey }, () => {
+                alert('Bark Key 已保存');
+            });
+        }
+    };
+
+    // Test Bark notification
+    const handleTestBark = async () => {
+        if (!barkKey) {
+            alert('请先输入 Bark Key');
+            return;
+        }
+
+        setTestingBark(true);
+        setBarkTestResult(null);
+
+        try {
+            const url = `https://api.day.app/${barkKey}/${encodeURIComponent('MarkPilot 通知测试')}/${encodeURIComponent('如果您在手机上看到此消息，说明 Bark 通知已配置成功！')}`;
+            const response = await fetch(url, {
+                signal: AbortSignal.timeout(10000)
+            });
+
+            if (response.ok) {
+                setBarkTestResult('success');
+                // Auto save on successful test
+                if (typeof chrome !== 'undefined' && chrome.storage) {
+                    chrome.storage.local.set({ bark_key: barkKey });
+                }
+            } else {
+                setBarkTestResult('error');
+            }
+        } catch (e) {
+            console.error('Bark test failed:', e);
+            setBarkTestResult('error');
+        } finally {
+            setTestingBark(false);
         }
     };
 
@@ -134,13 +221,86 @@ const SettingsPanel = ({ isOpen, onClose, onImport, onSortChange, currentSort })
                             />
                         </div>
 
-                        <button
-                            onClick={handleSaveAiSettings}
-                            className="w-full p-2 bg-vscode-blue hover:bg-vscode-blue-light text-white rounded text-[13px] flex items-center justify-center gap-2"
-                        >
-                            <Save size={14} />
-                            <span>保存 AI 设置</span>
-                        </button>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={handleTestAi}
+                                disabled={testingAi || !aiSettings.apiKey}
+                                className="flex-1 p-2 bg-vscode-green/20 hover:bg-vscode-green/30 text-vscode-green rounded text-[13px] flex items-center justify-center gap-2 disabled:opacity-50"
+                            >
+                                {testingAi ? (
+                                    <Loader2 size={14} className="animate-spin" />
+                                ) : aiTestResult === 'success' ? (
+                                    <CheckCircle size={14} />
+                                ) : aiTestResult === 'error' ? (
+                                    <XCircle size={14} className="text-vscode-red" />
+                                ) : (
+                                    <Settings size={14} />
+                                )}
+                                <span>{testingAi ? '测试中...' : aiTestResult === 'success' ? '连接成功' : aiTestResult === 'error' ? '连接失败' : '测试连接'}</span>
+                            </button>
+                            <button
+                                onClick={handleSaveAiSettings}
+                                className="flex-1 p-2 bg-vscode-blue hover:bg-vscode-blue-light text-white rounded text-[13px] flex items-center justify-center gap-2"
+                            >
+                                <Save size={14} />
+                                <span>保存设置</span>
+                            </button>
+                        </div>
+                        {aiTestResult === 'success' && (
+                            <p className="text-[11px] text-vscode-green mt-1">AI 设置已自动保存</p>
+                        )}
+                        {aiTestResult === 'error' && (
+                            <p className="text-[11px] text-vscode-red mt-1">请检查 API Key 和设置是否正确</p>
+                        )}
+                    </div>
+
+                    {/* Bark Notification Settings */}
+                    <div className="space-y-3 pt-3 border-t border-vscode-border">
+                        <label className="block text-[12px] text-vscode-text-muted uppercase tracking-wide">Bark 推送通知</label>
+                        <p className="text-[11px] text-vscode-text-muted">配置 Bark Key 后可在 iOS 设备上接收订阅更新推送</p>
+
+                        <div>
+                            <label className="text-[11px] text-vscode-text-muted mb-1 block">Bark Key</label>
+                            <input
+                                type="text"
+                                value={barkKey}
+                                onChange={(e) => setBarkKey(e.target.value)}
+                                placeholder="从 Bark App 获取的 Key"
+                                className="w-full p-2 bg-vscode-bg border border-vscode-border rounded text-[13px] text-vscode-text placeholder-vscode-text-muted focus:border-vscode-blue focus:outline-none"
+                            />
+                        </div>
+
+                        <div className="flex gap-2">
+                            <button
+                                onClick={handleTestBark}
+                                disabled={testingBark || !barkKey}
+                                className="flex-1 p-2 bg-vscode-orange/20 hover:bg-vscode-orange/30 text-vscode-orange rounded text-[13px] flex items-center justify-center gap-2 disabled:opacity-50"
+                            >
+                                {testingBark ? (
+                                    <Loader2 size={14} className="animate-spin" />
+                                ) : barkTestResult === 'success' ? (
+                                    <CheckCircle size={14} />
+                                ) : barkTestResult === 'error' ? (
+                                    <XCircle size={14} className="text-vscode-red" />
+                                ) : (
+                                    <Bell size={14} />
+                                )}
+                                <span>{testingBark ? '发送中...' : barkTestResult === 'success' ? '发送成功' : barkTestResult === 'error' ? '发送失败' : '测试通知'}</span>
+                            </button>
+                            <button
+                                onClick={handleSaveBarkKey}
+                                className="flex-1 p-2 bg-vscode-blue hover:bg-vscode-blue-light text-white rounded text-[13px] flex items-center justify-center gap-2"
+                            >
+                                <Save size={14} />
+                                <span>保存 Key</span>
+                            </button>
+                        </div>
+                        {barkTestResult === 'success' && (
+                            <p className="text-[11px] text-vscode-green">Bark Key 已自动保存，请检查手机通知</p>
+                        )}
+                        {barkTestResult === 'error' && (
+                            <p className="text-[11px] text-vscode-red">发送失败，请检查 Bark Key 是否正确</p>
+                        )}
                     </div>
 
                     {/* Import Section */}

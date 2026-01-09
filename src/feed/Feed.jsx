@@ -9,7 +9,7 @@ function Feed({ embedded = false }) {
   const [discovering, setDiscovering] = useState(false);
   const [refreshingIds, setRefreshingIds] = useState(new Set());
   const [generating, setGenerating] = useState(false);
-  const [briefing, setBriefing] = useState('');
+  const [briefing, setBriefing] = useState([]); // Array of {title, content}
   const [briefingExpanded, setBriefingExpanded] = useState(true);
   const [notifyEnabled, setNotifyEnabled] = useState(true);
   const [autoRefreshInterval, setAutoRefreshInterval] = useState(60); // minutes
@@ -83,7 +83,13 @@ function Feed({ embedded = false }) {
       if (typeof chrome !== 'undefined' && chrome.storage) {
         const result = await chrome.storage.local.get(['saved_briefing']);
         if (result.saved_briefing) {
-          setBriefing(result.saved_briefing);
+          // Handle both old string format and new array format
+          if (Array.isArray(result.saved_briefing)) {
+            setBriefing(result.saved_briefing);
+          } else if (typeof result.saved_briefing === 'string') {
+            // Convert old format to new
+            setBriefing([{ title: '简报', content: result.saved_briefing }]);
+          }
         }
       }
     } catch (e) {
@@ -462,7 +468,7 @@ function Feed({ embedded = false }) {
 
     setGenerating(true);
     setLogs([]);
-    setBriefing('');
+    setBriefing([]);
 
     try {
       if (typeof chrome === 'undefined' || !chrome.storage) {
@@ -494,14 +500,14 @@ function Feed({ embedded = false }) {
       ).join('\n\n').slice(0, 8000);
 
       const { generateBriefing } = await import('../services/aiService');
-      const brief = await generateBriefing(contentForAI, settings, (msg) => {
+      const briefItems = await generateBriefing(contentForAI, settings, (msg) => {
         setLogs(prev => [...prev, msg]);
       });
 
-      setBriefing(brief);
+      setBriefing(briefItems);
 
       // Save briefing
-      await chrome.storage.local.set({ saved_briefing: brief });
+      await chrome.storage.local.set({ saved_briefing: briefItems });
 
       // Mark items as read
       const updatedSubs = { ...subscriptions };
@@ -513,11 +519,14 @@ function Feed({ embedded = false }) {
       }
       setSubscriptions(updatedSubs);
 
-      // Notify via Bark
-      if (autoNotify) {
+      // Notify via Bark - send summary notification
+      if (autoNotify && briefItems.length > 0) {
+        // Find summary item or use first item
+        const summaryItem = briefItems.find(item => item.title === '总结') || briefItems[0];
+        const briefSummary = summaryItem.content.slice(0, 100) + (summaryItem.content.length > 100 ? '...' : '');
         await sendBarkNotification(
-          'AI 简报已生成',
-          `已分析 ${allItems.length} 条新内容`
+          `MarkPilot 简报 (${briefItems.length} 条)`,
+          briefSummary
         );
       }
 
@@ -985,9 +994,18 @@ function Feed({ embedded = false }) {
 
           {briefingExpanded && (
             <div className="flex-1 overflow-y-auto">
-              {briefing ? (
-                <div className="p-4 text-[13px] leading-relaxed whitespace-pre-wrap">
-                  {briefing}
+              {briefing.length > 0 ? (
+                <div className="p-4 space-y-4">
+                  {briefing.map((item, index) => (
+                    <div key={index} className="space-y-1">
+                      <div className={`text-[12px] font-medium ${item.title === '总结' ? 'text-vscode-blue' : 'text-vscode-orange'}`}>
+                        {item.title}
+                      </div>
+                      <div className="text-[13px] leading-relaxed text-vscode-text whitespace-pre-wrap">
+                        {item.content}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <div className="p-4 text-[13px] text-vscode-text-muted">
