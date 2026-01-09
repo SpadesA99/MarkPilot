@@ -507,6 +507,85 @@ async function callAnthropicJSON(apiKey, model, baseUrl, prompt) {
 
 
 /**
+ * Analyze a single article and generate outline/summary
+ * @param {string} title - Article title
+ * @param {string} content - Article content
+ * @param {Object} settings - AI settings
+ * @returns {Promise<string>} - Generated analysis/summary
+ */
+export const analyzeArticle = async (title, content, settings) => {
+    const { provider, apiKey, model, baseUrl } = settings;
+
+    if (!apiKey) {
+        throw new Error('API Key is required');
+    }
+
+    const prompt = `
+你是一个专业的文章分析助手。请对以下文章进行分析，生成简洁的中文大纲和摘要。
+
+文章标题：${title}
+
+文章内容：
+${content.slice(0, 4000)}
+
+请输出：
+1. 核心观点（1-2句话概括文章主旨）
+2. 关键要点（3-5个要点，每个要点一句话）
+3. 一句话总结
+
+格式要求：
+- 直接输出文本，不要JSON格式
+- 使用简洁的中文
+- 总字数控制在200字以内
+`;
+
+    try {
+        if (provider === 'anthropic') {
+            const response = await fetch(`${baseUrl || 'https://api.anthropic.com'}/v1/messages`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': apiKey,
+                    'anthropic-version': '2023-06-01',
+                    'anthropic-dangerous-direct-browser-access': 'true',
+                },
+                body: JSON.stringify({
+                    model: model || 'claude-haiku-4-5-20251001',
+                    max_tokens: 500,
+                    messages: [{ role: 'user', content: prompt }],
+                }),
+            });
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({}));
+                throw new Error(`Anthropic API error: ${error.error?.message || response.statusText}`);
+            }
+
+            const data = await response.json();
+            return data.content[0].text.trim();
+        } else {
+            const OpenAI = (await import('openai')).default;
+            const openai = new OpenAI({
+                apiKey,
+                baseURL: baseUrl || undefined,
+                dangerouslyAllowBrowser: true,
+            });
+
+            const completion = await openai.chat.completions.create({
+                model: model || 'gpt-3.5-turbo',
+                messages: [{ role: 'user', content: prompt }],
+                max_tokens: 500,
+            });
+
+            return completion.choices[0].message.content.trim();
+        }
+    } catch (e) {
+        console.error('Article analysis error:', e);
+        throw e;
+    }
+};
+
+/**
  * Test AI API connection with a simple request
  * @param {Object} settings - AI settings
  * @returns {Promise<boolean>} - True if connection successful

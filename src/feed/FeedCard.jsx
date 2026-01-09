@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { RefreshCw, Trash2, ExternalLink, ChevronDown, ChevronUp, Rss, Globe } from 'lucide-react';
+import { RefreshCw, Trash2, ExternalLink, ChevronDown, ChevronUp, Rss, Globe, Star } from 'lucide-react';
 
-function FeedCard({ subscription, isRefreshing, onRefresh, onDelete }) {
+function FeedCard({ subscription, isRefreshing, onRefresh, onDelete, onToggleFollow }) {
   const [expanded, setExpanded] = useState(false);
-  const { title, url, feedType, items = [], lastChecked } = subscription;
+  const { title, url, feedType, items = [], lastChecked, followed = false } = subscription;
 
   const hostname = new URL(url).hostname;
   const displayItems = expanded ? items.slice(0, 20) : items.slice(0, 5);
@@ -51,6 +51,13 @@ function FeedCard({ subscription, isRefreshing, onRefresh, onDelete }) {
         </div>
 
         <div className="flex items-center gap-1">
+          <button
+            onClick={onToggleFollow}
+            className={`p-1.5 hover:bg-vscode-hover rounded ${followed ? 'text-vscode-yellow' : 'text-vscode-text-muted hover:text-vscode-yellow'}`}
+            title={followed ? '取消关注' : '关注 (AI简报)'}
+          >
+            <Star size={14} fill={followed ? 'currentColor' : 'none'} />
+          </button>
           <button
             onClick={onRefresh}
             disabled={isRefreshing}

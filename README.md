@@ -4,7 +4,7 @@
 
 [English](#english) | [中文](#中文)
 
-![MarkPilot](https://img.shields.io/badge/version-1.3.0-blue.svg)
+![MarkPilot](https://img.shields.io/badge/version-1.4.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Chrome](https://img.shields.io/badge/chrome-extension-yellow.svg)
 
@@ -27,14 +27,17 @@ MarkPilot is a modern Chrome extension that revolutionizes how you organize book
 - **Import/Export** - Support for Chrome HTML and JSON formats
 - **Auto Cleanup** - Automatically remove empty folders after reorganization
 - **Quick Add Popup** - Add bookmarks from any page via toolbar icon
-- **RSS/Sitemap Subscription** - Auto-discover and subscribe to RSS feeds from bookmarks
+- **RSS Subscription** - Auto-discover and subscribe to RSS/Atom feeds from bookmarks
 - **Manual RSS Add** - Manually add any RSS/Atom subscription URL
 - **Concurrent Discovery** - 10 parallel requests for fast feed discovery
 - **Smart Deduplication** - Skip subscribed, deleted, and no-feed domains
-- **AI Briefing** - Generate AI summaries of unread subscription content
+- **Follow Subscriptions** - Star/follow specific subscriptions for AI analysis
+- **Full Content Fetch** - Automatically fetch full article content for followed feeds
+- **AI Article Analysis** - Generate outline and summary for each article individually
+- **AI Briefing** - Generate AI summaries of unread subscription content (followed only)
 - **Auto Refresh** - Configurable automatic feed refresh (15min - 24h)
-- **Bark Notifications** - Push notifications to iOS devices via Bark app
-- **Test Notifications** - Verify Bark notification settings in the feed settings panel
+- **Bark Notifications** - Push notifications to iOS devices via Bark app with article URL
+- **One-Click Clear** - Delete all subscriptions or clear all cached data
 
 ### Installation
 
@@ -83,12 +86,13 @@ MarkPilot is a modern Chrome extension that revolutionizes how you organize book
 7. **Subscriptions** - Click the orange "订阅" button to manage RSS subscriptions:
    - Click "一键发现订阅" to auto-discover RSS feeds (10 concurrent requests)
    - Click "手动添加" to add RSS/Atom URL directly
+   - Click the star icon to follow/unfollow a subscription (only followed feeds are analyzed by AI)
    - Click "刷新全部" to fetch latest content
-   - Click "AI 简报" to generate a summary of unread content
+   - Click "AI 简报" to generate analysis for each article from followed subscriptions
    - Configure auto-refresh interval in settings (default: 1 hour)
    - Deleted subscriptions and no-feed domains are cached to speed up future scans
-   - Enter your Bark Key in settings to receive push notifications on iOS
-   - Use "测试通知" to verify Bark notifications, "清除无订阅缓存" to rescan domains
+   - Enter your Bark Key in settings to receive push notifications with article links on iOS
+   - Use "删除所有订阅" to clear all subscriptions, "清除所有数据" to reset everything
 
 ### Tech Stack
 
@@ -122,14 +126,17 @@ MarkPilot 是一款现代化的 Chrome 书签管理扩展，通过 AI 技术彻�
 - **导入/导出** - 支持 Chrome HTML 和 JSON 格式
 - **自动清理** - 重新整理后自动删除空文件夹
 - **快速添加** - 通过工具栏图标快速将当前页面添加到书签
-- **RSS/Sitemap 订阅** - 自动发现并订阅书签中的 RSS 源
+- **RSS 订阅** - 自动发现并订阅书签中的 RSS/Atom 源
 - **手动添加订阅** - 支持直接输入 RSS/Atom 订阅地址
 - **并发发现** - 10 个并发请求快速发现订阅
 - **智能去重** - 跳过已订阅、已删除和无订阅的域名
-- **AI 简报** - 生成未读订阅内容的 AI 摘要
+- **关注订阅** - 星标关注特定订阅源，AI 仅分析关注的订阅
+- **全文抓取** - 自动抓取关注订阅的文章全文内容
+- **AI 文章分析** - 为每篇文章独立生成大纲和摘要
+- **AI 简报** - 生成关注订阅未读内容的 AI 摘要
 - **定时刷新** - 可配置的自动刷新（15分钟 - 24小时）
-- **Bark 推送** - 通过 Bark App 向 iOS 设备推送通知
-- **测试通知** - 在设置中验证 Bark 通知是否正常
+- **Bark 推送** - 通过 Bark App 推送通知，包含文章链接
+- **一键清理** - 删除所有订阅或清除所有缓存数据
 
 ### 安装方法
 
@@ -178,12 +185,13 @@ MarkPilot 是一款现代化的 Chrome 书签管理扩展，通过 AI 技术彻�
 7. **订阅管理** - 点击橙色「订阅」按钮管理 RSS 订阅：
    - 点击「一键发现订阅」从书签中自动发现 RSS 源（10 并发）
    - 点击「手动添加」直接输入 RSS/Atom 地址
+   - 点击星标图标关注/取消关注订阅源（仅关注的订阅会被 AI 分析）
    - 点击「刷新全部」获取最新内容
-   - 点击「AI 简报」生成未读内容摘要
+   - 点击「AI 简报」为关注订阅的每篇文章生成分析
    - 在设置中配置自动刷新间隔（默认：1小时）
    - 已删除的订阅和无订阅域名会被缓存，加快后续扫描
-   - 在设置中输入 Bark Key 接收 iOS 推送通知
-   - 「测试通知」验证 Bark 通知，「清除无订阅缓存」重新扫描域名
+   - 在设置中输入 Bark Key 接收 iOS 推送通知（包含文章链接）
+   - 「删除所有订阅」清空订阅，「清除所有数据」重置全部缓存
 
 ### 技术栈
 

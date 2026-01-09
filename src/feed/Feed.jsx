@@ -117,7 +117,7 @@ function Feed({ embedded = false }) {
   };
 
   // Send Bark notification
-  const sendBarkNotification = async (title, message, forceNotify = false) => {
+  const sendBarkNotification = async (title, message, forceNotify = false, articleUrl = null) => {
     // Always fetch latest bark_key from storage
     let currentBarkKey = barkKey;
     if (typeof chrome !== 'undefined' && chrome.storage) {
@@ -140,12 +140,16 @@ function Feed({ embedded = false }) {
     }
 
     try {
-      const url = `https://api.day.app/${currentBarkKey}/${encodeURIComponent(title)}/${encodeURIComponent(message)}`;
-      const response = await fetch(url, {
+      // Build Bark API URL with optional article URL parameter
+      let apiUrl = `https://api.day.app/${currentBarkKey}/${encodeURIComponent(title)}/${encodeURIComponent(message)}`;
+      if (articleUrl) {
+        apiUrl += `?url=${encodeURIComponent(articleUrl)}`;
+      }
+      const response = await fetch(apiUrl, {
         signal: AbortSignal.timeout(10000)
       });
       if (response.ok) {
-        console.log('Bark notification sent:', title);
+        console.log('Bark notification sent:', title, articleUrl ? `(URL: ${articleUrl})` : '');
         return true;
       } else {
         console.error('Bark notification failed:', response.status);
@@ -476,23 +480,74 @@ function Feed({ embedded = false }) {
     }
   };
 
+  // Toggle follow status for a subscription
+  const handleToggleFollow = async (subId) => {
+    const sub = subscriptions[subId];
+    if (!sub) return;
+
+    const updatedSub = { ...sub, followed: !sub.followed };
+    await saveSubscription(updatedSub);
+    setSubscriptions(prev => ({
+      ...prev,
+      [subId]: updatedSub
+    }));
+  };
+
+  // Fetch full article content from URL
+  const fetchArticleContent = async (url) => {
+    try {
+      const response = await fetch(url);
+      const html = await response.text();
+
+      // Extract text content from HTML
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+
+      // Remove script, style, nav, header, footer elements
+      const elementsToRemove = doc.querySelectorAll('script, style, nav, header, footer, aside, .nav, .header, .footer, .sidebar, .advertisement, .ad');
+      elementsToRemove.forEach(el => el.remove());
+
+      // Try to find article content
+      const article = doc.querySelector('article, .article, .post, .content, .entry-content, main, #content') || doc.body;
+
+      // Get text content and clean it up
+      let text = article?.textContent || '';
+      text = text.replace(/\s+/g, ' ').trim();
+
+      // Limit to first 3000 characters
+      return text.slice(0, 3000);
+    } catch (e) {
+      console.error('Failed to fetch article:', url, e);
+      return null;
+    }
+  };
+
   const handleGenerateBriefing = async (autoNotify = false) => {
-    // Get unread items
-    const allItems = Object.values(subscriptions)
-      .flatMap(sub => {
-        const readSet = new Set(sub.readItems || []);
-        return sub.items
-          .filter(item => !readSet.has(item.link))
-          .slice(0, 10)
-          .map(item => ({
-            source: sub.title,
-            ...item
-          }));
-      });
+    // Only get unread items from FOLLOWED subscriptions
+    const followedSubs = Object.values(subscriptions).filter(sub => sub.followed);
+
+    if (followedSubs.length === 0) {
+      if (!autoNotify) {
+        alert('没有关注的订阅源，请先点击星标关注订阅源');
+      }
+      return;
+    }
+
+    const allItems = followedSubs.flatMap(sub => {
+      const readSet = new Set(sub.readItems || []);
+      return sub.items
+        .filter(item => !readSet.has(item.link))
+        .slice(0, 5) // Limit to 5 items per subscription
+        .map(item => ({
+          source: sub.title,
+          subId: sub.id,
+          ...item
+        }));
+    });
 
     if (allItems.length === 0) {
       if (!autoNotify) {
-        alert('没有未读内容');
+        alert('关注的订阅源没有未读内容');
       }
       return;
     }
@@ -524,44 +579,78 @@ function Feed({ embedded = false }) {
         return;
       }
 
-      setLogs(prev => [...prev, `正在分析 ${allItems.length} 条未读内容...`]);
+      setLogs(prev => [...prev, `📰 关注订阅: ${followedSubs.length} 个，未读内容: ${allItems.length} 条`]);
 
-      const contentForAI = allItems.map(item =>
-        `[${item.source}] ${item.title}\n${item.description || ''}`
-      ).join('\n\n').slice(0, 8000);
+      const { analyzeArticle } = await import('../services/aiService');
+      const briefItems = [];
 
-      const { generateBriefing } = await import('../services/aiService');
-      const briefItems = await generateBriefing(contentForAI, settings, (msg) => {
-        setLogs(prev => [...prev, msg]);
-      });
+      // Process each article
+      for (let i = 0; i < allItems.length; i++) {
+        const item = allItems[i];
+        setLogs(prev => [...prev, `🔍 [${i + 1}/${allItems.length}] 抓取: ${item.title.slice(0, 30)}...`]);
+
+        // Fetch full article content
+        const fullContent = await fetchArticleContent(item.link);
+
+        if (!fullContent || fullContent.length < 100) {
+          setLogs(prev => [...prev, `⚠ 内容抓取失败，使用摘要`]);
+        }
+
+        const contentToAnalyze = fullContent || item.description || item.title;
+
+        setLogs(prev => [...prev, `🤖 AI 分析中...`]);
+
+        try {
+          // AI analyze each article
+          const analysis = await analyzeArticle(
+            item.title,
+            contentToAnalyze,
+            settings
+          );
+
+          briefItems.push({
+            title: item.title,
+            content: analysis,
+            url: item.link,
+            source: item.source
+          });
+
+          setLogs(prev => [...prev, `✓ 完成: ${item.title.slice(0, 30)}...`]);
+
+          // Send Bark notification for each article
+          if (autoNotify) {
+            await sendBarkNotification(
+              `[${item.source}] ${item.title}`,
+              analysis.slice(0, 200),
+              false, // not force notify
+              item.link // include URL
+            );
+          }
+        } catch (e) {
+          console.error('Article analysis failed:', e);
+          setLogs(prev => [...prev, `✗ 分析失败: ${item.title.slice(0, 20)}...`]);
+        }
+      }
 
       setBriefing(briefItems);
 
       // Save briefing
       await chrome.storage.local.set({ saved_briefing: briefItems });
 
-      // Mark items as read
+      // Mark items as read for followed subscriptions only
       const updatedSubs = { ...subscriptions };
-      for (const sub of Object.values(updatedSubs)) {
+      for (const sub of followedSubs) {
         const readSet = new Set(sub.readItems || []);
-        sub.items.slice(0, 10).forEach(item => readSet.add(item.link));
-        sub.readItems = Array.from(readSet).slice(-500); // Keep last 500
-        await saveSubscription(sub);
+        sub.items.slice(0, 5).forEach(item => readSet.add(item.link));
+        updatedSubs[sub.id] = {
+          ...updatedSubs[sub.id],
+          readItems: Array.from(readSet).slice(-500)
+        };
+        await saveSubscription(updatedSubs[sub.id]);
       }
       setSubscriptions(updatedSubs);
 
-      // Notify via Bark - send summary notification
-      if (autoNotify && briefItems.length > 0) {
-        // Find summary item or use first item
-        const summaryItem = briefItems.find(item => item.title === '总结') || briefItems[0];
-        const briefSummary = summaryItem.content.slice(0, 100) + (summaryItem.content.length > 100 ? '...' : '');
-        await sendBarkNotification(
-          `MarkPilot 简报 (${briefItems.length} 条)`,
-          briefSummary
-        );
-      }
-
-      setLogs(prev => [...prev, '✓ 简报生成完成']);
+      setLogs(prev => [...prev, `✓ 简报生成完成，共 ${briefItems.length} 条`]);
     } catch (e) {
       console.error('Briefing generation failed:', e);
       setLogs(prev => [...prev, `✗ 生成失败: ${e.message}`]);
@@ -1003,6 +1092,7 @@ function Feed({ embedded = false }) {
                   isRefreshing={refreshingIds.has(sub.id)}
                   onRefresh={() => handleRefresh(sub.id)}
                   onDelete={() => handleDelete(sub.id)}
+                  onToggleFollow={() => handleToggleFollow(sub.id)}
                 />
               ))}
             </div>
@@ -1032,11 +1122,31 @@ function Feed({ embedded = false }) {
               {briefing.length > 0 ? (
                 <div className="p-4 space-y-4">
                   {briefing.map((item, index) => (
-                    <div key={index} className="space-y-1">
-                      <div className={`text-[12px] font-medium ${item.title === '总结' ? 'text-vscode-blue' : 'text-vscode-orange'}`}>
-                        {item.title}
+                    <div key={index} className="space-y-2 pb-3 border-b border-vscode-border last:border-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          {item.url ? (
+                            <a
+                              href={item.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[12px] font-medium text-vscode-blue hover:underline line-clamp-2"
+                            >
+                              {item.title}
+                            </a>
+                          ) : (
+                            <div className={`text-[12px] font-medium ${item.title === '总结' ? 'text-vscode-blue' : 'text-vscode-orange'}`}>
+                              {item.title}
+                            </div>
+                          )}
+                          {item.source && (
+                            <div className="text-[10px] text-vscode-text-muted mt-0.5">
+                              来源: {item.source}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-[13px] leading-relaxed text-vscode-text whitespace-pre-wrap">
+                      <div className="text-[12px] leading-relaxed text-vscode-text whitespace-pre-wrap">
                         {item.content}
                       </div>
                     </div>
@@ -1046,9 +1156,11 @@ function Feed({ embedded = false }) {
                 <div className="p-4 text-[13px] text-vscode-text-muted">
                   {subscriptionList.length === 0
                     ? '先添加订阅，然后生成简报'
-                    : unreadCount > 0
-                      ? `有 ${unreadCount} 条未读内容，点击"AI 简报"生成摘要`
-                      : '暂无未读内容'
+                    : Object.values(subscriptions).some(s => s.followed)
+                      ? unreadCount > 0
+                        ? `有 ${unreadCount} 条未读内容，点击"AI 简报"生成摘要`
+                        : '暂无未读内容'
+                      : '请先点击星标关注订阅源，AI 简报仅分析关注的订阅'
                   }
                 </div>
               )}
