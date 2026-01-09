@@ -1,7 +1,7 @@
-// Feed Service - RSS/Sitemap Discovery and Parsing
+// Feed Service - RSS/Atom Discovery and Parsing
 
 /**
- * Discover RSS/Atom/Sitemap feed from a URL
+ * Discover RSS/Atom feed from a URL
  * @param {string} url - Website URL
  * @returns {Promise<{type: string, feedUrl: string, title: string} | null>}
  */
@@ -100,27 +100,6 @@ export const discoverFeed = async (url) => {
       } catch (e) {
         // Continue to next path
       }
-    }
-
-    // 3. Try sitemap.xml as fallback
-    try {
-      const sitemapUrl = baseUrl + '/sitemap.xml';
-      const response = await fetch(sitemapUrl, {
-        signal: AbortSignal.timeout(5000)
-      });
-
-      if (response.ok) {
-        const text = await response.text();
-        if (text.includes('<urlset') || text.includes('<sitemapindex')) {
-          return {
-            type: 'sitemap',
-            feedUrl: sitemapUrl,
-            title: 'Sitemap'
-          };
-        }
-      }
-    } catch (e) {
-      // Sitemap not found
     }
 
     return null;

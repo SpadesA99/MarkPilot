@@ -294,7 +294,16 @@ function Feed({ embedded = false }) {
       const processTask = async ({ url, title, domain, key }) => {
         try {
           const feed = await discoverFeed(url);
-          return { url, title, domain, key, feed, success: true };
+          if (feed) {
+            // Verify feed has content by parsing it
+            const items = await parseRSS(feed.feedUrl);
+            if (!items || items.length === 0) {
+              // Feed exists but has no items - treat as no feed
+              return { url, title, domain, key, feed: null, success: true, reason: 'empty' };
+            }
+            return { url, title, domain, key, feed, items, success: true };
+          }
+          return { url, title, domain, key, feed: null, success: true };
         } catch (e) {
           return { url, title, domain, key, feed: null, success: false, error: e };
         }
@@ -302,9 +311,9 @@ function Feed({ embedded = false }) {
 
       const handleResult = async (result) => {
         processed++;
-        const { url, title, domain, key, feed } = result;
+        const { url, title, domain, key, feed, items, reason } = result;
 
-        if (feed) {
+        if (feed && items && items.length > 0) {
           // Create subscription with unique ID using counter
           idCounter++;
           const subscription = {
@@ -314,16 +323,16 @@ function Feed({ embedded = false }) {
             feedUrl: feed.feedUrl,
             feedType: feed.type,
             feedTitle: feed.title,
-            items: [],
+            items: items.slice(0, 50), // Save first 50 items
             readItems: [],
-            lastChecked: null,
+            lastChecked: new Date().toISOString(),
             createdAt: new Date().toISOString()
           };
 
           await saveSubscription(subscription);
           existingDomains.add(domain);
           discovered++;
-          setLogs(prev => [...prev, `✓ 发现订阅: ${key} (${feed.type})`]);
+          setLogs(prev => [...prev, `✓ 发现订阅: ${key} (${feed.type}, ${items.length} 条)`]);
 
           // Update state
           setSubscriptions(prev => ({
@@ -333,7 +342,11 @@ function Feed({ embedded = false }) {
         } else {
           // Save key as no-feed (allows granular caching for subpaths)
           newNoFeedKeys.push(key);
-          setLogs(prev => [...prev, `✗ 无订阅: ${key}`]);
+          if (reason === 'empty') {
+            setLogs(prev => [...prev, `⚠ 空订阅: ${key} (无内容)`]);
+          } else {
+            setLogs(prev => [...prev, `✗ 无订阅: ${key}`]);
+          }
         }
 
         // Update progress
