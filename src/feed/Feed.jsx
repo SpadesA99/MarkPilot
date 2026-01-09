@@ -122,10 +122,11 @@ function Feed({ embedded = false }) {
     let currentBarkKey = barkKey;
     if (typeof chrome !== 'undefined' && chrome.storage) {
       const result = await chrome.storage.local.get(['bark_key', 'feed_notify_enabled']);
+      console.log('Bark notification - storage result:', result);
       currentBarkKey = result.bark_key || '';
       const currentNotifyEnabled = result.feed_notify_enabled !== false;
       if (!currentBarkKey) {
-        console.log('Bark notification skipped: no bark_key configured');
+        console.log('Bark notification skipped: no bark_key configured, result was:', result);
         return false;
       }
       if (!currentNotifyEnabled && !forceNotify) {
@@ -133,6 +134,7 @@ function Feed({ embedded = false }) {
         return false;
       }
     } else {
+      console.log('Bark notification - chrome.storage not available, using state:', barkKey);
       if (!currentBarkKey) return false;
       if (!notifyEnabled && !forceNotify) return false;
     }

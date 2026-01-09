@@ -99,9 +99,14 @@ const SettingsPanel = ({ isOpen, onClose, onImport, onSortChange, currentSort })
                 setBarkTestResult('success');
                 // Auto save on successful test
                 if (typeof chrome !== 'undefined' && chrome.storage) {
-                    chrome.storage.local.set({ bark_key: barkKey });
+                    await chrome.storage.local.set({ bark_key: barkKey });
+                    console.log('Bark key saved:', barkKey);
+                    // Verify save
+                    const check = await chrome.storage.local.get(['bark_key']);
+                    console.log('Bark key verified:', check.bark_key);
                 }
             } else {
+                console.error('Bark test response not ok:', response.status);
                 setBarkTestResult('error');
             }
         } catch (e) {
