@@ -617,18 +617,33 @@ function Feed({ embedded = false }) {
 
           setLogs(prev => [...prev, `✓ 完成: ${item.title.slice(0, 30)}...`]);
 
-          // Send Bark notification for each article
-          if (autoNotify) {
-            await sendBarkNotification(
-              `[${item.source}] ${item.title}`,
-              analysis.slice(0, 200),
-              false, // not force notify
-              item.link // include URL
-            );
-          }
+          // Send Bark notification for each article (always send)
+          await sendBarkNotification(
+            `[${item.source}] ${item.title}`,
+            analysis.slice(0, 200),
+            false, // not force notify
+            item.link // include URL
+          );
         } catch (e) {
           console.error('Article analysis failed:', e);
           setLogs(prev => [...prev, `✗ 分析失败: ${item.title.slice(0, 20)}...`]);
+
+          // Still add to briefing with original description
+          const fallbackContent = item.description || '(AI 分析失败)';
+          briefItems.push({
+            title: item.title,
+            content: fallbackContent,
+            url: item.link,
+            source: item.source
+          });
+
+          // Still send notification with original content (always send)
+          await sendBarkNotification(
+            `[${item.source}] ${item.title}`,
+            (item.description || '').slice(0, 200) || '点击查看详情',
+            false,
+            item.link
+          );
         }
       }
 
