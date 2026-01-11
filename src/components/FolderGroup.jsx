@@ -152,9 +152,14 @@ const FolderGroup = ({ folder, onDelete, onOpen, clickStats, onAiReorganize, onM
                                     ) : (
                                         <Folder size={16} className="text-vscode-yellow flex-shrink-0" />
                                     )}
-                                    <span className={`text-[13px] text-vscode-text truncate ${item.url ? 'group-hover:text-vscode-text-bright' : 'text-vscode-text-muted'}`}>
+                                    <span className={`text-[13px] text-vscode-text truncate min-w-0 flex-1 ${item.url ? 'group-hover:text-vscode-text-bright' : 'text-vscode-text-muted'}`}>
                                         {item.title || (item.url ? new URL(item.url).hostname : '无标题')}
                                     </span>
+                                    {item.parentFolderName && (
+                                        <span className="text-[11px] text-vscode-text-muted bg-vscode-active px-1.5 py-0.5 rounded flex-shrink-0 ml-auto">
+                                            {item.parentFolderName}
+                                        </span>
+                                    )}
                                 </div>
 
                                 {/* Hover Actions */}

@@ -18,7 +18,24 @@ export const createBookmark = async (bookmark) => {
 };
 
 export const searchBookmarks = async (query) => {
-    return await chrome.bookmarks.search(query);
+    const results = await chrome.bookmarks.search(query);
+    // Add parent folder name for each result
+    const resultsWithFolder = await Promise.all(
+        results.map(async (item) => {
+            if (item.parentId) {
+                try {
+                    const parents = await chrome.bookmarks.get(item.parentId);
+                    if (parents && parents[0]) {
+                        return { ...item, parentFolderName: parents[0].title };
+                    }
+                } catch (e) {
+                    // Ignore errors
+                }
+            }
+            return item;
+        })
+    );
+    return resultsWithFolder;
 };
 
 export const trackClick = async (url) => {

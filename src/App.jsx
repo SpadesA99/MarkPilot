@@ -693,6 +693,12 @@ function App() {
                 placeholder="搜索书签... (Ctrl+P)"
                 value={searchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSearch(searchQuery);
+                  }
+                }}
                 className="w-full pl-9 pr-4 py-1.5 bg-vscode-bg border border-vscode-border rounded text-[13px] text-vscode-text placeholder-vscode-text-muted focus:border-vscode-blue focus:outline-none"
               />
             </div>
@@ -826,7 +832,7 @@ function App() {
           onDelete={handleDelete}
           onPinFolder={handlePinFolder}
           pinnedFolders={pinnedFolders}
-          folders={bookmarks.filter(b => !b.url)}
+          folders={currentFolder?.children?.filter(b => !b.url) || []}
           onMoveBookmark={handleMoveBookmark}
           currentFolderId={currentFolder?.id}
         />
