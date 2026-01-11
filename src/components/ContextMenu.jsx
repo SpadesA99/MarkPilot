@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { FolderPlus } from 'lucide-react';
+import { FolderPlus, Trash2 } from 'lucide-react';
 
-const ContextMenu = ({ x, y, onClose, onCreateFolder }) => {
+const ContextMenu = ({ x, y, onClose, onCreateFolder, onDelete, target }) => {
     const menuRef = useRef(null);
 
     useEffect(() => {
@@ -24,7 +24,6 @@ const ContextMenu = ({ x, y, onClose, onCreateFolder }) => {
         };
     }, [onClose]);
 
-    // Adjust position to keep menu within viewport
     const menuWidth = 160;
     const menuHeight = 40;
     const adjustedX = Math.min(x, window.innerWidth - menuWidth - 10);
@@ -37,22 +36,54 @@ const ContextMenu = ({ x, y, onClose, onCreateFolder }) => {
         zIndex: 50
     };
 
+    // Determine if target is a bookmark (URL) or folder
+    const isBookmark = target && target.url;
+    const isFolder = target && !target.url && target.children !== undefined;
+
     return (
         <div
             ref={menuRef}
             style={adjustedStyle}
             className="bg-vscode-sidebar border border-vscode-border rounded shadow-lg py-1 min-w-[160px]"
         >
-            <button
-                onClick={() => {
-                    onCreateFolder();
-                    onClose();
-                }}
-                className="w-full px-3 py-1.5 flex items-center gap-2 text-[13px] text-vscode-text hover:bg-vscode-hover cursor-pointer"
-            >
-                <FolderPlus size={14} className="text-vscode-yellow" />
-                新建文件夹
-            </button>
+            {/* Show delete option if target is a bookmark or folder */}
+            {isBookmark && (
+                <button
+                    onClick={() => {
+                        onDelete(target);
+                        onClose();
+                    }}
+                    className="w-full px-3 py-1.5 flex items-center gap-2 text-[13px] text-vscode-text hover:bg-vscode-hover cursor-pointer"
+                >
+                    <Trash2 size={14} className="text-vscode-red" />
+                    删除书签
+                </button>
+            )}
+            {isFolder && (
+                <button
+                    onClick={() => {
+                        onDelete(target);
+                        onClose();
+                    }}
+                    className="w-full px-3 py-1.5 flex items-center gap-2 text-[13px] text-vscode-text hover:bg-vscode-hover cursor-pointer"
+                >
+                    <Trash2 size={14} className="text-vscode-red" />
+                    删除文件夹
+                </button>
+            )}
+            {/* Show create folder option if no target (right-click on empty area) */}
+            {!target && (
+                <button
+                    onClick={() => {
+                        onCreateFolder();
+                        onClose();
+                    }}
+                    className="w-full px-3 py-1.5 flex items-center gap-2 text-[13px] text-vscode-text hover:bg-vscode-hover cursor-pointer"
+                >
+                    <FolderPlus size={14} className="text-vscode-yellow" />
+                    新建文件夹
+                </button>
+            )}
         </div>
     );
 };

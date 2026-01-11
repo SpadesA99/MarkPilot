@@ -18,7 +18,7 @@ function App() {
   const [processingLogs, setProcessingLogs] = useState([]);
   const [clickStats, setClickStats] = useState({});
   const [totalBookmarkCount, setTotalBookmarkCount] = useState(0);
-  const [contextMenu, setContextMenu] = useState(null); // { x, y }
+  const [contextMenu, setContextMenu] = useState(null); // { x, y, target? }
   const logContainerRef = useRef(null);
 
   // Auto scroll logs to bottom
@@ -239,9 +239,9 @@ function App() {
   };
 
   // Handle right-click context menu
-  const handleContextMenu = (e) => {
+  const handleContextMenu = (e, target = null) => {
     e.preventDefault();
-    setContextMenu({ x: e.clientX, y: e.clientY });
+    setContextMenu({ x: e.clientX, y: e.clientY, target });
   };
 
   const handleImport = async (content, type, useAiReorg) => {
@@ -779,6 +779,7 @@ function App() {
                 clickStats={clickStats}
                 onAiReorganize={handleAiReorganizeFolder}
                 onMoveBookmark={handleMoveBookmark}
+                onContextMenu={handleContextMenu}
               />
             </div>
           )}
@@ -796,8 +797,10 @@ function App() {
         <ContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
+          target={contextMenu.target}
           onClose={() => setContextMenu(null)}
           onCreateFolder={handleCreateFolder}
+          onDelete={handleDelete}
         />
       )}
     </div>

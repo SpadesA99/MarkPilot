@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Folder, ChevronDown, ChevronUp, Trash2, Sparkles } from 'lucide-react';
 
-const FolderGroup = ({ folder, onDelete, onOpen, clickStats, onAiReorganize, onMoveBookmark }) => {
+const FolderGroup = ({ folder, onDelete, onOpen, clickStats, onAiReorganize, onMoveBookmark, onContextMenu }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const [isDragOver, setIsDragOver] = useState(false);
     const DISPLAY_LIMIT = 12;
@@ -79,6 +79,11 @@ const FolderGroup = ({ folder, onDelete, onOpen, clickStats, onAiReorganize, onM
             {/* Header - VS Code Explorer style */}
             <div
                 className={`px-2 py-1.5 flex items-center justify-between bg-vscode-sidebar border-b transition-colors ${isDragOver ? 'bg-vscode-blue/20 border-vscode-blue' : 'border-vscode-border'}`}
+                onContextMenu={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onContextMenu && onContextMenu(e, folder);
+                }}
             >
                 <div
                     className="flex items-center gap-1.5 text-vscode-text flex-1 min-w-0"
@@ -119,6 +124,11 @@ const FolderGroup = ({ folder, onDelete, onOpen, clickStats, onAiReorganize, onM
                                 onDragStart={(e) => item.url && handleDragStart(e, item)}
                                 className={`group flex items-center justify-between px-2 py-1 border-l-2 border-transparent ${item.url ? 'hover:bg-vscode-hover cursor-grab active:cursor-grabbing hover:border-vscode-blue' : ''}`}
                                 onClick={() => item.url && onOpen(item)}
+                                onContextMenu={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    onContextMenu && onContextMenu(e, item);
+                                }}
                                 title={item.title || item.url || '无标题'}
                             >
                                 <div className="flex items-center gap-2 flex-1 min-w-0 pl-4">
