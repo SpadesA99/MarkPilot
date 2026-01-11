@@ -826,6 +826,9 @@ function App() {
           onDelete={handleDelete}
           onPinFolder={handlePinFolder}
           pinnedFolders={pinnedFolders}
+          folders={bookmarks.filter(b => !b.url)}
+          onMoveBookmark={handleMoveBookmark}
+          currentFolderId={currentFolder?.id}
         />
       )}
     </div>

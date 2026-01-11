@@ -4,7 +4,7 @@
 
 [English](#english) | [中文](#中文)
 
-![MarkPilot](https://img.shields.io/badge/version-1.4.7-blue.svg)
+![MarkPilot](https://img.shields.io/badge/version-1.4.8-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Chrome](https://img.shields.io/badge/chrome-extension-yellow.svg)
 
@@ -40,8 +40,9 @@ MarkPilot is a modern Chrome extension that revolutionizes how you organize book
 - **Bark Notifications** - Push notifications to iOS devices via Bark app with article URL
 - **One-Click Clear** - Delete all subscriptions or clear all cached data
 - **Drag & Drop** - Drag bookmarks between folders to reorganize
-- **Context Menu** - Right-click to create folders, delete bookmarks or folders
+- **Context Menu** - Right-click to create folders, delete bookmarks or folders, move bookmarks
 - **Folder Pinning** - Pin folders to keep them at the top of the list
+- **Move Bookmark** - Right-click bookmark to move it to another folder via submenu
 
 ### Installation
 
@@ -143,8 +144,9 @@ MarkPilot 是一款现代化的 Chrome 书签管理扩展，通过 AI 技术彻�
 - **Bark 推送** - 通过 Bark App 推送通知，包含文章链接
 - **一键清理** - 删除所有订阅或清除所有缓存数据
 - **拖拽移动** - 拖动书签到其他文件夹进行整理
-- **右键菜单** - 右键创建文件夹、删除书签或文件夹
+- **右键菜单** - 右键创建文件夹、删除书签或文件夹、移动书签
 - **文件夹置顶** - 置顶文件夹使其始终显示在最前面
+- **移动书签** - 右键书签通过子菜单快速移动到其他文件夹
 
 ### 安装方法
 

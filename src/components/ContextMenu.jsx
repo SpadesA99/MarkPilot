@@ -1,8 +1,9 @@
-import React, { useEffect, useRef } from 'react';
-import { FolderPlus, Trash2, Pin } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { FolderPlus, Trash2, Pin, FolderInput, ChevronRight, Folder } from 'lucide-react';
 
-const ContextMenu = ({ x, y, onClose, onCreateFolder, onDelete, target, onPinFolder, pinnedFolders = [] }) => {
+const ContextMenu = ({ x, y, onClose, onCreateFolder, onDelete, target, onPinFolder, pinnedFolders = [], folders = [], onMoveBookmark, currentFolderId }) => {
     const menuRef = useRef(null);
+    const [showMoveSubmenu, setShowMoveSubmenu] = useState(false);
 
     useEffect(() => {
         const handleClickOutside = (e) => {
@@ -28,10 +29,22 @@ const ContextMenu = ({ x, y, onClose, onCreateFolder, onDelete, target, onPinFol
     const isBookmark = target && target.url;
     const isFolder = target && !target.url && target.children !== undefined;
 
+    // Filter available folders for move (exclude current folder and uncategorized)
+    const availableFolders = folders.filter(f =>
+        f.id !== currentFolderId &&
+        f.id !== 'uncategorized' &&
+        !f.url
+    );
+
     const menuWidth = 160;
+    const submenuWidth = 150;
     // Calculate menu height based on number of items (each item ~32px + padding)
-    const itemCount = isBookmark ? 1 : isFolder ? (target.id !== 'uncategorized' ? 2 : 1) : 1;
+    const bookmarkItemCount = (availableFolders.length > 0 && onMoveBookmark) ? 2 : 1;
+    const itemCount = isBookmark ? bookmarkItemCount : isFolder ? (target.id !== 'uncategorized' ? 2 : 1) : 1;
     const menuHeight = itemCount * 32 + 8;
+
+    // Check if submenu would overflow to the right
+    const submenuOverflows = x + menuWidth + submenuWidth > window.innerWidth - 10;
     const adjustedX = Math.min(x, window.innerWidth - menuWidth - 10);
     const adjustedY = Math.min(y, window.innerHeight - menuHeight - 10);
 
@@ -48,18 +61,56 @@ const ContextMenu = ({ x, y, onClose, onCreateFolder, onDelete, target, onPinFol
             style={adjustedStyle}
             className="bg-vscode-sidebar border border-vscode-border rounded shadow-lg py-1 min-w-[160px]"
         >
-            {/* Show delete option if target is a bookmark or folder */}
+            {/* Show options for bookmark */}
             {isBookmark && (
-                <button
-                    onClick={() => {
-                        onDelete(target);
-                        onClose();
-                    }}
-                    className="w-full px-3 py-1.5 flex items-center gap-2 text-[13px] text-vscode-text hover:bg-vscode-hover cursor-pointer"
-                >
-                    <Trash2 size={14} className="text-vscode-red" />
-                    删除书签
-                </button>
+                <>
+                    {/* Move to folder option with submenu */}
+                    {availableFolders.length > 0 && onMoveBookmark && (
+                        <div
+                            className="relative"
+                            onMouseEnter={() => setShowMoveSubmenu(true)}
+                            onMouseLeave={() => setShowMoveSubmenu(false)}
+                        >
+                            <button
+                                className="w-full px-3 py-1.5 flex items-center justify-between text-[13px] text-vscode-text hover:bg-vscode-hover cursor-pointer"
+                            >
+                                <span className="flex items-center gap-2">
+                                    <FolderInput size={14} className="text-vscode-blue" />
+                                    移动到...
+                                </span>
+                                <ChevronRight size={14} className="text-vscode-text-muted" />
+                            </button>
+                            {/* Submenu - position left or right based on available space */}
+                            {showMoveSubmenu && (
+                                <div className={`absolute top-0 bg-vscode-sidebar border border-vscode-border rounded shadow-lg py-1 min-w-[140px] max-h-[300px] overflow-y-auto ${submenuOverflows ? 'right-full mr-1' : 'left-full ml-1'}`}>
+                                    {availableFolders.map(folder => (
+                                        <button
+                                            key={folder.id}
+                                            onClick={() => {
+                                                onMoveBookmark(target.id, folder.id);
+                                                onClose();
+                                            }}
+                                            className="w-full px-3 py-1.5 flex items-center gap-2 text-[13px] text-vscode-text hover:bg-vscode-hover cursor-pointer"
+                                        >
+                                            <Folder size={14} className="text-vscode-yellow" />
+                                            <span className="truncate">{folder.title}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    <button
+                        onClick={() => {
+                            onDelete(target);
+                            onClose();
+                        }}
+                        className="w-full px-3 py-1.5 flex items-center gap-2 text-[13px] text-vscode-text hover:bg-vscode-hover cursor-pointer"
+                    >
+                        <Trash2 size={14} className="text-vscode-red" />
+                        删除书签
+                    </button>
+                </>
             )}
             {isFolder && (
                 <>
