@@ -4,7 +4,7 @@
 
 [English](#english) | [中文](#中文)
 
-![MarkPilot](https://img.shields.io/badge/version-1.4.3-blue.svg)
+![MarkPilot](https://img.shields.io/badge/version-1.4.4-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Chrome](https://img.shields.io/badge/chrome-extension-yellow.svg)
 

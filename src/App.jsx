@@ -10,7 +10,7 @@ function App() {
   const [currentFolder, setCurrentFolder] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [sortMode, setSortMode] = useState('default'); // 'default' | 'frequency'
+  const [sortMode] = useState('frequency'); // Always sort by click count
   const [currentView, setCurrentView] = useState('bookmarks'); // 'bookmarks' | 'feed'
   const [loading, setLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState('');
@@ -32,20 +32,12 @@ function App() {
   useEffect(() => {
     const loadSettings = async () => {
       if (typeof chrome !== 'undefined' && chrome.storage) {
-        const result = await chrome.storage.local.get(['click_stats', 'sort_mode']);
+        const result = await chrome.storage.local.get(['click_stats']);
         if (result.click_stats) setClickStats(result.click_stats);
-        if (result.sort_mode) setSortMode(result.sort_mode);
       }
     };
     loadSettings();
   }, []);
-
-  // Save sortMode when it changes
-  useEffect(() => {
-    if (typeof chrome !== 'undefined' && chrome.storage) {
-      chrome.storage.local.set({ sort_mode: sortMode });
-    }
-  }, [sortMode]);
 
   // Refresh stats when bookmarks change (optional, but good for sync)
   useEffect(() => {
@@ -166,8 +158,13 @@ function App() {
     }
   };
 
-  const handleOpen = (item) => {
-    trackClick(item.url);
+  const handleOpen = async (item) => {
+    await trackClick(item.url);
+    // Update local click stats
+    setClickStats(prev => ({
+      ...prev,
+      [item.url]: (prev[item.url] || 0) + 1
+    }));
     window.open(item.url, '_blank');
   };
 
@@ -715,8 +712,6 @@ function App() {
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         onImport={handleImport}
-        onSortChange={setSortMode}
-        currentSort={sortMode}
       />
     </div>
   );

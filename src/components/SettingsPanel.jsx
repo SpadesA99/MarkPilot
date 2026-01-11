@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Upload, Save, Settings, Bell, Loader2, CheckCircle, XCircle } from 'lucide-react';
 
-const SettingsPanel = ({ isOpen, onClose, onImport, onSortChange, currentSort }) => {
+const SettingsPanel = ({ isOpen, onClose, onImport }) => {
     const [aiSettings, setAiSettings] = useState({
         provider: 'openai',
         apiKey: '',
@@ -138,19 +138,6 @@ const SettingsPanel = ({ isOpen, onClose, onImport, onSortChange, currentSort })
 
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                    {/* Sort Preference */}
-                    <div>
-                        <label className="block text-[12px] text-vscode-text-muted mb-1.5 uppercase tracking-wide">排序方式</label>
-                        <select
-                            value={currentSort}
-                            onChange={(e) => onSortChange(e.target.value)}
-                            className="w-full p-2 bg-vscode-bg border border-vscode-border rounded text-[13px] text-vscode-text focus:border-vscode-blue focus:outline-none"
-                        >
-                            <option value="default">默认 (文件夹优先)</option>
-                            <option value="frequency">访问频率 (点击次数)</option>
-                        </select>
-                    </div>
-
                     {/* AI Settings */}
                     <div className="space-y-3">
                         <label className="block text-[12px] text-vscode-text-muted uppercase tracking-wide">AI 设置</label>
