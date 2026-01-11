@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Folder, ChevronDown, ChevronUp, Trash2, Sparkles } from 'lucide-react';
 
-const FolderGroup = ({ folder, onDelete, onOpen, clickStats, onAiReorganize }) => {
+const FolderGroup = ({ folder, onDelete, onOpen, clickStats, onAiReorganize, onMoveBookmark }) => {
     const [isExpanded, setIsExpanded] = useState(false);
+    const [isDragOver, setIsDragOver] = useState(false);
     const DISPLAY_LIMIT = 12;
 
     let items = folder.children ? [...folder.children] : [];
@@ -24,14 +25,65 @@ const FolderGroup = ({ folder, onDelete, onOpen, clickStats, onAiReorganize }) =
     const visibleItems = isExpanded ? items : items.slice(0, DISPLAY_LIMIT);
     const hasMore = items.length > DISPLAY_LIMIT;
 
+    // Drag handlers for bookmark items
+    const handleDragStart = (e, item) => {
+        e.dataTransfer.setData('application/json', JSON.stringify({
+            id: item.id,
+            title: item.title,
+            url: item.url,
+            sourceFolder: folder.id
+        }));
+        e.dataTransfer.effectAllowed = 'move';
+    };
+
+    // Drop handlers for folder
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        setIsDragOver(true);
+    };
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        // Only set false if leaving the container entirely (not entering a child)
+        if (!e.currentTarget.contains(e.relatedTarget)) {
+            setIsDragOver(false);
+        }
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        setIsDragOver(false);
+
+        try {
+            const data = JSON.parse(e.dataTransfer.getData('application/json'));
+            console.log('Drop data:', data, 'Target folder:', folder.id, 'Has onMoveBookmark:', !!onMoveBookmark);
+            if (data.id && data.sourceFolder !== folder.id && onMoveBookmark) {
+                console.log('Moving bookmark', data.id, 'to folder', folder.id);
+                onMoveBookmark(data.id, folder.id);
+            } else {
+                console.log('Move skipped - same folder or missing handler');
+            }
+        } catch (err) {
+            console.error('Drop failed:', err);
+        }
+    };
+
     return (
-        <div className="bg-vscode-sidebar border border-vscode-border rounded overflow-hidden mb-3">
+        <div
+            className={`bg-vscode-sidebar border rounded overflow-hidden mb-3 transition-colors ${isDragOver ? 'border-vscode-blue ring-2 ring-vscode-blue/30' : 'border-vscode-border'}`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+        >
             {/* Header - VS Code Explorer style */}
-            <div className="px-2 py-1.5 flex items-center justify-between bg-vscode-sidebar border-b border-vscode-border">
+            <div
+                className={`px-2 py-1.5 flex items-center justify-between bg-vscode-sidebar border-b transition-colors ${isDragOver ? 'bg-vscode-blue/20 border-vscode-blue' : 'border-vscode-border'}`}
+            >
                 <div
                     className="flex items-center gap-1.5 text-vscode-text flex-1 min-w-0"
                 >
-                    <Folder size={16} className="text-vscode-yellow flex-shrink-0" />
+                    <Folder size={16} className={`flex-shrink-0 ${isDragOver ? 'text-vscode-blue' : 'text-vscode-yellow'}`} />
                     <span className="text-[13px] font-normal truncate">{folder.title}</span>
                     <span className="text-[11px] text-vscode-text-muted ml-1">
                         {items.length}{totalClicks > 0 ? ` · ${totalClicks}` : ''}
@@ -63,7 +115,9 @@ const FolderGroup = ({ folder, onDelete, onOpen, clickStats, onAiReorganize }) =
                         {visibleItems.map(item => (
                             <div
                                 key={item.id}
-                                className={`group flex items-center justify-between px-2 py-1 border-l-2 border-transparent ${item.url ? 'hover:bg-vscode-hover cursor-pointer hover:border-vscode-blue' : ''}`}
+                                draggable={!!item.url}
+                                onDragStart={(e) => item.url && handleDragStart(e, item)}
+                                className={`group flex items-center justify-between px-2 py-1 border-l-2 border-transparent ${item.url ? 'hover:bg-vscode-hover cursor-grab active:cursor-grabbing hover:border-vscode-blue' : ''}`}
                                 onClick={() => item.url && onOpen(item)}
                                 title={item.title || item.url || '无标题'}
                             >

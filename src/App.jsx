@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Search, Settings, Sparkles, Rss, Bookmark } from 'lucide-react';
 import BookmarkGrid from './components/BookmarkGrid';
 import SettingsPanel from './components/SettingsPanel';
+import ContextMenu from './components/ContextMenu';
 import Feed from './feed/Feed';
 import { getBookmarksTree, deleteBookmark, createBookmark, searchBookmarks, moveBookmark, trackClick, flattenBookmarks, clearAllBookmarks, rebuildTree } from './services/bookmarkService';
 
@@ -17,6 +18,7 @@ function App() {
   const [processingLogs, setProcessingLogs] = useState([]);
   const [clickStats, setClickStats] = useState({});
   const [totalBookmarkCount, setTotalBookmarkCount] = useState(0);
+  const [contextMenu, setContextMenu] = useState(null); // { x, y }
   const logContainerRef = useRef(null);
 
   // Auto scroll logs to bottom
@@ -166,6 +168,80 @@ function App() {
       [item.url]: (prev[item.url] || 0) + 1
     }));
     window.open(item.url, '_blank');
+  };
+
+  // Handle moving bookmark to another folder
+  const handleMoveBookmark = async (bookmarkId, targetFolderId) => {
+    console.log('handleMoveBookmark called:', bookmarkId, targetFolderId);
+    try {
+      // Handle virtual "uncategorized" folder - move to root instead
+      const actualTargetId = targetFolderId === 'uncategorized' ? currentFolder.id : targetFolderId;
+      console.log('Moving to actual target:', actualTargetId);
+      await moveBookmark(bookmarkId, actualTargetId);
+      console.log('Move completed successfully');
+      // Refresh
+      const tree = await getBookmarksTree();
+      const findNode = (nodes, id) => {
+        for (const node of nodes) {
+          if (node.id === id) return node;
+          if (node.children) {
+            const found = findNode(node.children, id);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+      const newFolder = findNode(tree, currentFolder.id);
+      if (newFolder) {
+        setCurrentFolder(newFolder);
+        setBookmarks(newFolder.children || []);
+      } else {
+        loadBookmarks();
+      }
+    } catch (e) {
+      console.error('Move failed:', e);
+    }
+  };
+
+  // Handle creating new folder via context menu
+  const handleCreateFolder = async () => {
+    const name = prompt('请输入文件夹名称:');
+    if (!name || !name.trim()) return;
+
+    try {
+      await createBookmark({
+        parentId: currentFolder.id,
+        title: name.trim()
+      });
+      // Refresh
+      const tree = await getBookmarksTree();
+      const findNode = (nodes, id) => {
+        for (const node of nodes) {
+          if (node.id === id) return node;
+          if (node.children) {
+            const found = findNode(node.children, id);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+      const newFolder = findNode(tree, currentFolder.id);
+      if (newFolder) {
+        setCurrentFolder(newFolder);
+        setBookmarks(newFolder.children || []);
+      } else {
+        loadBookmarks();
+      }
+    } catch (e) {
+      console.error('Create folder failed:', e);
+      alert('创建文件夹失败: ' + e.message);
+    }
+  };
+
+  // Handle right-click context menu
+  const handleContextMenu = (e) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY });
   };
 
   const handleImport = async (content, type, useAiReorg) => {
@@ -695,13 +771,14 @@ function App() {
               </div>
             </div>
           ) : (
-            <div className="p-4">
+            <div className="p-4" onContextMenu={handleContextMenu}>
               <BookmarkGrid
                 items={sortedBookmarks}
                 onDelete={handleDelete}
                 onOpen={handleOpen}
                 clickStats={clickStats}
                 onAiReorganize={handleAiReorganizeFolder}
+                onMoveBookmark={handleMoveBookmark}
               />
             </div>
           )}
@@ -713,6 +790,16 @@ function App() {
         onClose={() => setIsSettingsOpen(false)}
         onImport={handleImport}
       />
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+          onCreateFolder={handleCreateFolder}
+        />
+      )}
     </div>
   );
 }
