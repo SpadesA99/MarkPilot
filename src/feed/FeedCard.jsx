@@ -5,7 +5,13 @@ function FeedCard({ subscription, isRefreshing, onRefresh, onDelete, onToggleFol
   const [expanded, setExpanded] = useState(false);
   const { title, url, feedType, items = [], lastChecked, followed = false } = subscription;
 
-  const hostname = new URL(url).hostname;
+  const hostname = (() => {
+    try {
+      return new URL(url).hostname;
+    } catch {
+      return url || 'unknown';
+    }
+  })();
   const displayItems = expanded ? items.slice(0, 20) : items.slice(0, 5);
 
   const formatDate = (dateStr) => {
@@ -25,7 +31,7 @@ function FeedCard({ subscription, isRefreshing, onRefresh, onDelete, onToggleFol
   };
 
   return (
-    <div className="bg-vscode-sidebar border border-vscode-border rounded-lg overflow-hidden">
+    <div className="bg-vscode-sidebar border border-vscode-border rounded-lg overflow-hidden mb-4">
       {/* Header */}
       <div className="px-4 py-3 border-b border-vscode-border flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">

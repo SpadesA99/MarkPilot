@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { RefreshCw, Rss, Sparkles, Bell, BellOff, ChevronDown, ChevronUp, Search, Clock, Settings, Plus, X } from 'lucide-react';
+import Masonry from 'react-masonry-css';
 import FeedCard from './FeedCard';
 import { getSubscriptions, deleteSubscription, refreshSubscription, discoverFeed, saveSubscription, getIgnoredDomains, clearIgnoredDomains, getNoFeedDomains, addNoFeedDomains, clearNoFeedDomains, parseRSS } from '../services/feedService';
 
@@ -1107,7 +1108,11 @@ function Feed({ embedded = false }) {
               <p className="text-[12px] mt-2">点击"一键发现订阅"从书签中搜索 RSS 源</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <Masonry
+              breakpointCols={{ default: 3, 1280: 2, 768: 1 }}
+              className="flex -ml-4 w-auto"
+              columnClassName="pl-4 bg-clip-padding"
+            >
               {subscriptionList.map(sub => (
                 <FeedCard
                   key={sub.id}
@@ -1118,7 +1123,7 @@ function Feed({ embedded = false }) {
                   onToggleFollow={() => handleToggleFollow(sub.id)}
                 />
               ))}
-            </div>
+            </Masonry>
           )}
         </div>
 
