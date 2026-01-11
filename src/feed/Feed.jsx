@@ -27,6 +27,9 @@ function Feed({ embedded = false }) {
   const [addingManual, setAddingManual] = useState(false);
   const [addError, setAddError] = useState('');
 
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+
   // Load subscriptions on mount
   useEffect(() => {
     loadSubscriptions();
@@ -768,14 +771,30 @@ function Feed({ embedded = false }) {
     }
   };
 
-  const subscriptionList = Object.values(subscriptions);
-  const unreadCount = subscriptionList.reduce((sum, sub) => {
+  const allSubscriptions = Object.values(subscriptions);
+
+  // Filter subscriptions based on search query
+  const subscriptionList = searchQuery
+    ? allSubscriptions.filter(sub => {
+        const query = searchQuery.toLowerCase();
+        // Search in title
+        if (sub.title?.toLowerCase().includes(query)) return true;
+        // Search in URL
+        if (sub.url?.toLowerCase().includes(query)) return true;
+        if (sub.feedUrl?.toLowerCase().includes(query)) return true;
+        // Search in item titles
+        if (sub.items?.some(item => item.title?.toLowerCase().includes(query))) return true;
+        return false;
+      })
+    : allSubscriptions;
+
+  const unreadCount = allSubscriptions.reduce((sum, sub) => {
     const readSet = new Set(sub.readItems || []);
     return sum + (sub.items?.filter(i => !readSet.has(i.link)).length || 0);
   }, 0);
 
   // Count unread items from followed subscriptions only (for AI briefing)
-  const followedUnreadCount = subscriptionList
+  const followedUnreadCount = allSubscriptions
     .filter(sub => sub.followed)
     .reduce((sum, sub) => {
       const readSet = new Set(sub.readItems || []);
@@ -791,7 +810,7 @@ function Feed({ embedded = false }) {
             <Rss size={14} className="text-vscode-orange" />
             <span className="text-vscode-text">MarkPilot Subscriptions</span>
             <span>-</span>
-            <span>{subscriptionList.length} 订阅 / {unreadCount} 未读</span>
+            <span>{searchQuery ? `${subscriptionList.length}/${allSubscriptions.length} 订阅` : `${allSubscriptions.length} 订阅`} / {unreadCount} 未读</span>
           </div>
           <div className="flex items-center gap-1">
             <a
@@ -844,6 +863,18 @@ function Feed({ embedded = false }) {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Search input */}
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-vscode-text-muted w-3.5 h-3.5" />
+            <input
+              type="text"
+              placeholder="搜索订阅..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-48 pl-8 pr-3 py-1.5 bg-vscode-bg border border-vscode-border rounded text-[12px] text-vscode-text placeholder-vscode-text-muted focus:border-vscode-blue focus:outline-none"
+            />
+          </div>
+
           <button
             onClick={() => setShowSettings(!showSettings)}
             className="p-1.5 text-vscode-text-muted hover:text-vscode-text hover:bg-vscode-hover rounded"
