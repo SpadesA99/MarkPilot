@@ -4,7 +4,7 @@
 
 [English](#english) | [中文](#中文)
 
-![MarkPilot](https://img.shields.io/badge/version-1.4.0-blue.svg)
+![MarkPilot](https://img.shields.io/badge/version-1.4.3-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Chrome](https://img.shields.io/badge/chrome-extension-yellow.svg)
 
@@ -20,6 +20,7 @@ MarkPilot is a modern Chrome extension that revolutionizes how you organize book
 
 - **AI Smart Categorization** - Automatically organize bookmarks using OpenAI, Anthropic Claude, or custom AI providers
 - **VS Code Dark Theme** - Clean, professional interface inspired by VS Code
+- **Flat Folder View** - All folders displayed as groups on one page, no nested navigation
 - **Masonry Layout** - Efficient waterfall grid display without gaps
 - **Click Statistics** - Track bookmark usage and sort by frequency
 - **Batch Processing** - Handle thousands of bookmarks with concurrent AI requests
@@ -119,6 +120,7 @@ MarkPilot 是一款现代化的 Chrome 书签管理扩展，通过 AI 技术彻�
 
 - **AI 智能分类** - 使用 OpenAI、Anthropic Claude 或自定义 AI 服务自动整理书签
 - **VS Code 深色主题** - 简洁专业的界面设计，灵感来自 VS Code
+- **扁平文件夹视图** - 所有文件夹在同一页面显示为分组，无嵌套导航
 - **瀑布流布局** - 高效的网格展示，无空白间隙
 - **点击统计** - 追踪书签使用情况，按访问频率排序
 - **批量处理** - 并发 AI 请求，可处理数千个书签

@@ -346,7 +346,7 @@ const SettingsPanel = ({ isOpen, onClose, onImport, onSortChange, currentSort })
                                             reader.readAsText(e.target.files[0]);
                                         }
                                     }}
-                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                                 />
                                 <button className="w-full h-full flex items-center justify-center gap-2 px-3 py-2 bg-vscode-hover text-vscode-text border border-vscode-border rounded text-[13px] hover:bg-vscode-active pointer-events-none">
                                     <Upload size={14} />

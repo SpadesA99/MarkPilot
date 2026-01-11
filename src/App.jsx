@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Settings, ChevronRight, Sparkles, Rss, Bookmark } from 'lucide-react';
+import { Search, Settings, Sparkles, Rss, Bookmark } from 'lucide-react';
 import BookmarkGrid from './components/BookmarkGrid';
 import SettingsPanel from './components/SettingsPanel';
 import Feed from './feed/Feed';
-import { getBookmarksTree, deleteBookmark, createBookmark, searchBookmarks, moveBookmark, trackClick, getClickStats, flattenBookmarks, clearAllBookmarks, rebuildTree } from './services/bookmarkService';
+import { getBookmarksTree, deleteBookmark, createBookmark, searchBookmarks, moveBookmark, trackClick, flattenBookmarks, clearAllBookmarks, rebuildTree } from './services/bookmarkService';
 
 function App() {
   const [bookmarks, setBookmarks] = useState([]);
   const [currentFolder, setCurrentFolder] = useState(null);
-  const [breadcrumbs, setBreadcrumbs] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [sortMode, setSortMode] = useState('default'); // 'default' | 'frequency'
@@ -123,25 +122,6 @@ function App() {
 
   const navigateTo = (folder) => {
     setCurrentFolder(folder);
-    // Update breadcrumbs
-    // Note: In a real tree, we'd need to traverse up. 
-    // For simplicity, we'll maintain a stack if we navigate down, 
-    // but since we get the whole tree, we can find the path if we had parentIds.
-    // Here, let's just push to stack if it's a child, or reset if root.
-    // Actually, the simplest way for this demo is to just append if it's a child.
-    // But better: rebuild path from tree.
-    // For now, let's just use a simple history stack approach for the UI demo.
-    if (folder.id === '1' || folder.id === '0') {
-      setBreadcrumbs([folder]);
-    } else {
-      // Check if folder is already in breadcrumbs to truncate
-      const index = breadcrumbs.findIndex(b => b.id === folder.id);
-      if (index !== -1) {
-        setBreadcrumbs(breadcrumbs.slice(0, index + 1));
-      } else {
-        setBreadcrumbs([...breadcrumbs, folder]);
-      }
-    }
     setBookmarks(folder.children || []);
   };
 
@@ -202,22 +182,12 @@ function App() {
       if (type === 'json') {
         const json = JSON.parse(content);
         importedBookmarks = json.map(item => ({ title: item.title, url: item.url, id: 'imported_' + Date.now() + Math.random() }));
-      } else if (type === 'html') {
-        const { parseNetscapeHTML } = await import('./services/bookmarkService'); // We need to export this or move logic
-        // Actually parseNetscapeHTML is not exported. Let's assume we can get a flat list or tree.
-        // We can use a temporary helper or modify bookmarkService to export it.
-        // Or better, let's just use the existing importHtmlBookmarks if not AI, 
-        // but for AI we need the data first.
-        // Let's modify bookmarkService to export parseNetscapeHTML or similar.
-        // Wait, I can't easily modify bookmarkService again without another tool call.
-        // Let's use a trick: importHtmlBookmarks creates them.
-        // If useAiReorg is true, we can:
-        // 1. Import normally (creates temp structure).
-        // 2. Then get full tree.
-        // 3. Then flatten and reorganize.
-        // This is easier and reuses existing parsing logic!
       } else if (type === 'backup') {
-        // ... existing backup logic ...
+        // Confirm before restore since it will clear all existing data
+        if (!confirm('警告：恢复备份将清除所有现有书签、设置和统计数据，并替换为备份中的数据。是否继续？')) {
+          setLoading(false);
+          return;
+        }
         const { importData } = await import('./services/bookmarkService');
         await importData(content);
         alert('恢复成功！页面将刷新。');
@@ -678,26 +648,9 @@ function App() {
           </div>
         </header>
 
-        {/* VS Code Breadcrumbs - only show in bookmarks view */}
+        {/* Stats bar - only show in bookmarks view */}
         {currentView === 'bookmarks' && !searchQuery && (
-          <nav className="bg-vscode-bg border-b border-vscode-border px-3 py-1 flex items-center justify-between">
-            <div className="flex items-center gap-1 text-[13px]">
-              {breadcrumbs.map((folder, index) => (
-                <React.Fragment key={folder.id}>
-                  {index > 0 && <ChevronRight size={12} className="text-vscode-text-muted" />}
-                  <button
-                    onClick={() => navigateTo(folder)}
-                    className={`px-1 py-0.5 rounded hover:bg-vscode-hover ${
-                      index === breadcrumbs.length - 1
-                        ? 'text-vscode-text'
-                        : 'text-vscode-text-muted hover:text-vscode-text'
-                    }`}
-                  >
-                    {folder.title || '书签栏'}
-                  </button>
-                </React.Fragment>
-              ))}
-            </div>
+          <nav className="bg-vscode-bg border-b border-vscode-border px-3 py-1 flex items-center justify-end">
             <div className="flex items-center gap-3 text-[12px] text-vscode-text-muted">
               <span>{sortedBookmarks.length} 项</span>
               <span className="text-vscode-green">{totalBookmarkCount} 总书签</span>
@@ -748,7 +701,6 @@ function App() {
             <div className="p-4">
               <BookmarkGrid
                 items={sortedBookmarks}
-                onNavigate={navigateTo}
                 onDelete={handleDelete}
                 onOpen={handleOpen}
                 clickStats={clickStats}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Folder, ChevronDown, ChevronUp, Trash2, Sparkles, ChevronRight } from 'lucide-react';
+import { Folder, ChevronDown, ChevronUp, Trash2, Sparkles } from 'lucide-react';
 
-const FolderGroup = ({ folder, onNavigate, onDelete, onOpen, clickStats, onAiReorganize }) => {
+const FolderGroup = ({ folder, onDelete, onOpen, clickStats, onAiReorganize }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const DISPLAY_LIMIT = 12;
 
@@ -27,12 +27,10 @@ const FolderGroup = ({ folder, onNavigate, onDelete, onOpen, clickStats, onAiReo
     return (
         <div className="bg-vscode-sidebar border border-vscode-border rounded overflow-hidden mb-3">
             {/* Header - VS Code Explorer style */}
-            <div className="px-2 py-1.5 flex items-center justify-between bg-vscode-sidebar hover:bg-vscode-hover border-b border-vscode-border">
+            <div className="px-2 py-1.5 flex items-center justify-between bg-vscode-sidebar border-b border-vscode-border">
                 <div
-                    className="flex items-center gap-1.5 text-vscode-text hover:text-vscode-text-bright cursor-pointer flex-1 min-w-0"
-                    onClick={() => onNavigate(folder)}
+                    className="flex items-center gap-1.5 text-vscode-text flex-1 min-w-0"
                 >
-                    <ChevronRight size={16} className="text-vscode-text-muted flex-shrink-0" />
                     <Folder size={16} className="text-vscode-yellow flex-shrink-0" />
                     <span className="text-[13px] font-normal truncate">{folder.title}</span>
                     <span className="text-[11px] text-vscode-text-muted ml-1">
@@ -65,8 +63,8 @@ const FolderGroup = ({ folder, onNavigate, onDelete, onOpen, clickStats, onAiReo
                         {visibleItems.map(item => (
                             <div
                                 key={item.id}
-                                className="group flex items-center justify-between px-2 py-1 hover:bg-vscode-hover cursor-pointer border-l-2 border-transparent hover:border-vscode-blue"
-                                onClick={() => item.url ? onOpen(item) : onNavigate(item)}
+                                className={`group flex items-center justify-between px-2 py-1 border-l-2 border-transparent ${item.url ? 'hover:bg-vscode-hover cursor-pointer hover:border-vscode-blue' : ''}`}
+                                onClick={() => item.url && onOpen(item)}
                                 title={item.title || item.url || '无标题'}
                             >
                                 <div className="flex items-center gap-2 flex-1 min-w-0 pl-4">
@@ -80,7 +78,7 @@ const FolderGroup = ({ folder, onNavigate, onDelete, onOpen, clickStats, onAiReo
                                     ) : (
                                         <Folder size={16} className="text-vscode-yellow flex-shrink-0" />
                                     )}
-                                    <span className="text-[13px] text-vscode-text truncate group-hover:text-vscode-text-bright">
+                                    <span className={`text-[13px] text-vscode-text truncate ${item.url ? 'group-hover:text-vscode-text-bright' : 'text-vscode-text-muted'}`}>
                                         {item.title || (item.url ? new URL(item.url).hostname : '无标题')}
                                     </span>
                                 </div>

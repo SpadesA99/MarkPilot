@@ -208,20 +208,32 @@ export const importData = async (jsonString) => {
             throw new Error('Invalid backup file format');
         }
 
-        // Restore settings and stats
+        // Validate backup data
+        if (!data.bookmarks || !Array.isArray(data.bookmarks)) {
+            throw new Error('Invalid backup: missing bookmarks data');
+        }
+
+        // Get current tree to find root folder ids
+        const currentTree = await getBookmarksTree();
+        const rootIds = currentTree.map(f => f.id);
+
+        // Clear all existing bookmarks first
+        await clearAllBookmarks(rootIds);
+
+        // Clear all existing storage data
+        await chrome.storage.local.clear();
+
+        // Restore settings (includes click_stats if present)
         if (data.settings) {
             await chrome.storage.local.set(data.settings);
         }
-        if (data.stats) {
+
+        // Restore stats (for backward compatibility with older backups that stored stats separately)
+        if (data.stats && !data.settings?.click_stats) {
             await chrome.storage.local.set({ click_stats: data.stats });
         }
 
-        // Restore bookmarks
-        const dateStr = new Date(data.timestamp).toLocaleString();
-        const rootFolder = await chrome.bookmarks.create({
-            title: `Restored ${dateStr}`
-        });
-
+        // Restore bookmarks to their original locations
         const createRecursive = async (nodes, pid) => {
             for (const node of nodes) {
                 if (node.children) {
@@ -240,7 +252,17 @@ export const importData = async (jsonString) => {
             }
         };
 
-        await createRecursive(data.bookmarks, rootFolder.id);
+        // For each top-level folder in backup, find matching folder in current tree and restore contents
+        for (const backupFolder of data.bookmarks) {
+            // Find matching folder by id or title
+            const targetFolder = currentTree.find(f => f.id === backupFolder.id || f.title === backupFolder.title);
+
+            if (targetFolder && backupFolder.children) {
+                // Restore children into the matching folder
+                await createRecursive(backupFolder.children, targetFolder.id);
+            }
+        }
+
         return true;
     } catch (e) {
         console.error('Import failed', e);

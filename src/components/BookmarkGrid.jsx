@@ -3,7 +3,7 @@ import Masonry from 'react-masonry-css';
 import FolderGroup from './FolderGroup';
 import { Folder } from 'lucide-react';
 
-const BookmarkGrid = ({ items, onNavigate, onDelete, onOpen, clickStats, onAiReorganize }) => {
+const BookmarkGrid = ({ items, onDelete, onOpen, clickStats, onAiReorganize }) => {
     // Helper to get total clicks for a folder (recursive)
     const getTotalClicks = (node) => {
         if (node.url) return clickStats?.[node.url] || 0;
@@ -58,7 +58,6 @@ const BookmarkGrid = ({ items, onNavigate, onDelete, onOpen, clickStats, onAiReo
                 <FolderGroup
                     key={group.id}
                     folder={group}
-                    onNavigate={onNavigate}
                     onDelete={onDelete}
                     onOpen={onOpen}
                     clickStats={clickStats}
