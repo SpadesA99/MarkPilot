@@ -3,7 +3,7 @@ import Masonry from 'react-masonry-css';
 import FolderGroup from './FolderGroup';
 import { Folder } from 'lucide-react';
 
-const BookmarkGrid = ({ items, onDelete, onOpen, clickStats, onAiReorganize, onMoveBookmark, onContextMenu }) => {
+const BookmarkGrid = ({ items, onDelete, onOpen, clickStats, onAiReorganize, onMoveBookmark, onContextMenu, pinnedFolders = [], onPinFolder }) => {
     // Helper to get total clicks for a folder (recursive)
     const getTotalClicks = (node) => {
         if (node.url) return clickStats?.[node.url] || 0;
@@ -27,10 +27,14 @@ const BookmarkGrid = ({ items, onDelete, onOpen, clickStats, onAiReorganize, onM
         });
     }
 
-    // Sort folders by total click count (descending)
-    if (clickStats) {
-        allGroups.sort((a, b) => getTotalClicks(b) - getTotalClicks(a));
-    }
+    // Sort folders: pinned first, then by click count
+    allGroups.sort((a, b) => {
+        const isPinnedA = pinnedFolders.includes(a.id);
+        const isPinnedB = pinnedFolders.includes(b.id);
+        if (isPinnedA && !isPinnedB) return -1;
+        if (!isPinnedA && isPinnedB) return 1;
+        return getTotalClicks(b) - getTotalClicks(a);
+    });
 
     if (allGroups.length === 0) {
         return (
@@ -64,6 +68,8 @@ const BookmarkGrid = ({ items, onDelete, onOpen, clickStats, onAiReorganize, onM
                     onAiReorganize={onAiReorganize}
                     onMoveBookmark={onMoveBookmark}
                     onContextMenu={onContextMenu}
+                    isPinned={pinnedFolders.includes(group.id)}
+                    onPinFolder={onPinFolder}
                 />
             ))}
         </Masonry>

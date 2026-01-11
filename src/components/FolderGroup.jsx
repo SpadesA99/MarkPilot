@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Folder, ChevronDown, ChevronUp, Trash2, Sparkles } from 'lucide-react';
+import { Folder, ChevronDown, ChevronUp, Trash2, Sparkles, Pin } from 'lucide-react';
 
-const FolderGroup = ({ folder, onDelete, onOpen, clickStats, onAiReorganize, onMoveBookmark, onContextMenu }) => {
+const FolderGroup = ({ folder, onDelete, onOpen, clickStats, onAiReorganize, onMoveBookmark, onContextMenu, isPinned, onPinFolder }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const [isDragOver, setIsDragOver] = useState(false);
     const DISPLAY_LIMIT = 12;
@@ -78,7 +78,7 @@ const FolderGroup = ({ folder, onDelete, onOpen, clickStats, onAiReorganize, onM
         >
             {/* Header - VS Code Explorer style */}
             <div
-                className={`px-2 py-1.5 flex items-center justify-between bg-vscode-sidebar border-b transition-colors ${isDragOver ? 'bg-vscode-blue/20 border-vscode-blue' : 'border-vscode-border'}`}
+                className={`group px-2 py-1.5 flex items-center justify-between bg-vscode-sidebar border-b transition-colors ${isDragOver ? 'bg-vscode-blue/20 border-vscode-blue' : 'border-vscode-border'}`}
                 onContextMenu={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -88,6 +88,7 @@ const FolderGroup = ({ folder, onDelete, onOpen, clickStats, onAiReorganize, onM
                 <div
                     className="flex items-center gap-1.5 text-vscode-text flex-1 min-w-0"
                 >
+                    {isPinned && <Pin size={12} className="flex-shrink-0 text-vscode-blue" />}
                     <Folder size={16} className={`flex-shrink-0 ${isDragOver ? 'text-vscode-blue' : 'text-vscode-yellow'}`} />
                     <span className="text-[13px] font-normal truncate">{folder.title}</span>
                     <span className="text-[11px] text-vscode-text-muted ml-1">
@@ -95,6 +96,15 @@ const FolderGroup = ({ folder, onDelete, onOpen, clickStats, onAiReorganize, onM
                     </span>
                 </div>
                 <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 hover:opacity-100">
+                    {folder.id !== 'uncategorized' && onPinFolder && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onPinFolder(folder.id); }}
+                            className={`p-1 hover:bg-vscode-active rounded ${isPinned ? 'text-vscode-blue' : 'text-vscode-text-muted hover:text-vscode-blue'}`}
+                            title={isPinned ? '取消置顶' : '置顶'}
+                        >
+                            <Pin size={14} />
+                        </button>
+                    )}
                     {folder.title === '未分类' && onAiReorganize && (
                         <button
                             onClick={(e) => { e.stopPropagation(); onAiReorganize(folder); }}

@@ -19,6 +19,7 @@ function App() {
   const [clickStats, setClickStats] = useState({});
   const [totalBookmarkCount, setTotalBookmarkCount] = useState(0);
   const [contextMenu, setContextMenu] = useState(null); // { x, y, target? }
+  const [pinnedFolders, setPinnedFolders] = useState([]); // Array of pinned folder IDs
   const logContainerRef = useRef(null);
 
   // Auto scroll logs to bottom
@@ -34,8 +35,9 @@ function App() {
   useEffect(() => {
     const loadSettings = async () => {
       if (typeof chrome !== 'undefined' && chrome.storage) {
-        const result = await chrome.storage.local.get(['click_stats']);
+        const result = await chrome.storage.local.get(['click_stats', 'pinned_folders']);
         if (result.click_stats) setClickStats(result.click_stats);
+        if (result.pinned_folders) setPinnedFolders(result.pinned_folders);
       }
     };
     loadSettings();
@@ -72,6 +74,14 @@ function App() {
         const isFolderA = !a.url;
         const isFolderB = !b.url;
 
+        // Pinned folders always first
+        if (isFolderA && isFolderB) {
+          const isPinnedA = pinnedFolders.includes(a.id);
+          const isPinnedB = pinnedFolders.includes(b.id);
+          if (isPinnedA && !isPinnedB) return -1;
+          if (!isPinnedA && isPinnedB) return 1;
+        }
+
         // If both are folders or both are files, sort by clicks
         if (isFolderA === isFolderB) {
           return getClicks(b) - getClicks(a);
@@ -81,7 +91,7 @@ function App() {
       });
     }
     return items;
-  }, [bookmarks, sortMode, clickStats]);
+  }, [bookmarks, sortMode, clickStats, pinnedFolders]);
 
   // Initial Load
   useEffect(() => {
@@ -235,6 +245,17 @@ function App() {
     } catch (e) {
       console.error('Create folder failed:', e);
       alert('创建文件夹失败: ' + e.message);
+    }
+  };
+
+  // Handle pin/unpin folder
+  const handlePinFolder = async (folderId) => {
+    const newPinned = pinnedFolders.includes(folderId)
+      ? pinnedFolders.filter(id => id !== folderId)
+      : [...pinnedFolders, folderId];
+    setPinnedFolders(newPinned);
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      await chrome.storage.local.set({ pinned_folders: newPinned });
     }
   };
 
@@ -780,6 +801,8 @@ function App() {
                 onAiReorganize={handleAiReorganizeFolder}
                 onMoveBookmark={handleMoveBookmark}
                 onContextMenu={handleContextMenu}
+                pinnedFolders={pinnedFolders}
+                onPinFolder={handlePinFolder}
               />
             </div>
           )}
@@ -801,6 +824,8 @@ function App() {
           onClose={() => setContextMenu(null)}
           onCreateFolder={handleCreateFolder}
           onDelete={handleDelete}
+          onPinFolder={handlePinFolder}
+          pinnedFolders={pinnedFolders}
         />
       )}
     </div>
